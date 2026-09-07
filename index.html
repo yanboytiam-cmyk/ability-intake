@@ -1,0 +1,3434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3060B0">
+<!-- iOS ne lit pas le manifeste pour l'ecran d'accueil : il lui faut ces
+     trois-la, sinon l'icone posee est une capture de la page. -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AES Admission">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="robots" content="noindex, nofollow">
+<title>New Client Admission — Ability and Empowerment Services</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   La charte est celle du site du cabinet, relevee dans sa feuille de style :
+   le patient qui arrive depuis abilityempowermenths.com doit reconnaitre la
+   marque sur l'ecran ou il donne son numero de securite sociale.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --bleu:#3060B0; --bleu-sombre:#274F92; --bleu-clair:#D6E2F5; --bleu-pale:#EEF3FC;
+  --vert:#4E9E2E; --vert-vif:#80E050; --vert-pale:#EAF7E0;
+  --creme:#F4EDDC; --creme-clair:#FBF7EE; --creme-ligne:#DDD0AE;
+  --encre:#0E130D; --encre-moyen:#28311F; --encre-doux:#54604A;
+  --rouge:#A33D1F; --rouge-pale:#FBEDE8; --ambre:#C77A22;
+  --blanc:#fff;
+  --serif:'Fraunces',Georgia,'Times New Roman',serif;
+  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --rayon:12px; --ombre:0 1px 2px rgba(14,19,13,.06),0 8px 24px rgba(14,19,13,.06);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+
+/* ── La coquille : en-tete fixe, contenu qui defile, barre fixe ──────────────
+   La barre du bas etait en `position:fixed`. Sur un telephone, ca ne tient
+   pas : Safari et Chrome mobile font grandir et retrecir la fenetre pendant
+   le defilement, quand la barre d'adresse se replie. Un element fixe suit ce
+   mouvement au lieu de rester colle en bas, et il tressaute.
+
+   La seule mise en page qui ne tressaute pas est celle des applications :
+   une colonne haute comme l'ecran, l'en-tete et la barre en taille fixe, et
+   le contenu qui defile DANS le milieu. Plus rien n'est en `position:fixed`,
+   donc plus rien ne peut se decaler.
+
+   `100dvh` et non `100vh` : sur mobile, `vh` compte la fenetre barre
+   d'adresse depliee, ce qui fait depasser la barre du bas hors de l'ecran. */
+html{height:100%}
+body{height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain}
+body{
+  background:var(--creme-clair); color:var(--encre);
+  font:16px/1.55 var(--sans);
+
+}
+[hidden]{display:none!important}
+
+/* ── Bandeau ─────────────────────────────────────────────────────────────── */
+.mast{
+  flex:0 0 auto; z-index:30; background:var(--blanc);
+  border-bottom:1px solid var(--creme-ligne);
+  padding:10px 16px calc(10px + env(safe-area-inset-top)) 16px;
+  padding-top:calc(10px + env(safe-area-inset-top));
+}
+.mast-in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.mast img{width:38px;height:38px;border-radius:50%;flex:0 0 auto}
+.mast-t{font:600 14px/1.2 var(--sans);color:var(--bleu-sombre)}
+.mast-s{font:12px/1.3 var(--sans);color:var(--encre-doux)}
+.pastilles{display:flex;gap:3px;max-width:720px;margin:10px auto 0}
+.pastilles i{flex:1;height:4px;border-radius:99px;background:var(--bleu-clair);
+  transition:background .35s ease,transform .35s ease}
+.pastilles i.faite{background:var(--vert)}
+.pastilles i.encours{background:var(--bleu);transform:scaleY(1.9)}
+.jauge{display:none;height:4px;background:var(--bleu-clair);border-radius:99px;overflow:hidden;margin-top:10px;max-width:720px;margin-left:auto;margin-right:auto}
+.jauge i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--bleu),var(--vert));transition:width .45s cubic-bezier(.22,1,.36,1)}
+.compte{max-width:720px;margin:6px auto 0;display:flex;justify-content:space-between;font:12px/1 var(--sans);color:var(--encre-doux)}
+
+/* ── Structure ───────────────────────────────────────────────────────────── */
+main>*{max-width:720px;margin-left:auto;margin-right:auto}
+main{padding:14px 13px 22px}
+
+/* ── Format telephone d'abord ─────────────────────────────────────────────
+   Le formulaire vit sur une tablette tenue en portrait et sur le telephone du
+   patient. Les tailles sont donc reglees pour le pouce et pour un ecran de
+   trois cent quatre-vingt-dix pixels, pas pour un ecran de bureau qu'on
+   retrecirait ensuite.
+
+   On descend d'un demi-point partout plutot que d'un point sur une seule
+   chose : c'est la somme des interlignes qui allonge une page, pas la taille
+   d'un titre. Rien ne passe sous 13 pixels, en-dessous on ne lit plus, on
+   devine. */
+
+/* ── Le rythme vertical ─────────────────────────────────────────────────────
+   Repris de BCB, ou les cartes sont plus denses. Avec treize etapes courtes,
+   l'air entre les champs ne rassure plus, il allonge : chaque etape doit
+   tenir sous le pouce sans defilement inutile. */
+h1{font:600 27px/1.2 var(--serif);color:var(--bleu-sombre);margin:0 0 10px}
+h2{font:600 20px/1.2 var(--serif);color:var(--bleu-sombre);margin:0 0 2px;text-wrap:balance}
+.chapeau{color:var(--encre-doux);font-size:13.5px;line-height:1.4;margin:0 0 12px;max-width:56ch}
+.carte{background:var(--blanc);border:1px solid var(--creme-ligne);border-radius:11px;padding:13px 13px;margin:0 0 10px;box-shadow:var(--ombre)}
+.carte>h3{font:600 11px/1.2 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--vert);margin:0 0 10px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.trio{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+@media(max-width:520px){.duo,.trio{grid-template-columns:1fr}}
+
+/* ── Champs ──────────────────────────────────────────────────────────────── */
+.champ{margin:0 0 10px}
+/* Chaque etape entre par la droite : le patient voit qu'il a avance, sans
+   avoir a relire le titre pour s'en convaincre. */
+/* ── Les animations ───────────────────────────────────────────────────────────
+   Trois seulement, et courtes. Un formulaire medical de vingt minutes n'a pas
+   besoin d'etre spectaculaire : il a besoin de dire au patient qu'il avance.
+
+   1. L'etape entre par la droite : on a avance, on ne s'est pas perdu.
+   2. La reponse touchee fait un petit ressaut : le doigt a porte.
+   3. La pastille de l'etape se remplit en glissant : le chemin se boucle.
+
+   Rien ne depasse trois dixiemes de seconde. Une animation qu'on attend est
+   une animation qui coute du temps de remplissage. */
+section[id^=et_]:not([hidden]){animation:entree .3s cubic-bezier(.22,1,.36,1) both}
+@keyframes entree{
+  from{opacity:0;transform:translate3d(18px,0,0)}
+  to{opacity:1;transform:none}
+}
+
+/* Le ressaut de la reponse. Pose par JS, retire a la fin, pour qu'il rejoue
+   a chaque fois et pas seulement au premier clic. */
+.chip.pop{animation:pop .26s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{0%{transform:scale(1)}42%{transform:scale(1.11)}100%{transform:scale(1)}}
+.chip:active{transform:scale(.96)}
+
+/* La pastille franchie se remplit par la gauche. */
+.pastilles i{position:relative;overflow:hidden}
+.pastilles i.faite::after{content:'';position:absolute;inset:0;background:var(--vert);
+  transform-origin:left;animation:remplir .34s cubic-bezier(.22,1,.36,1) both}
+@keyframes remplir{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* La coche de fin, quand le dossier est parti. */
+.coche svg{animation:trace .5s cubic-bezier(.22,1,.36,1) .1s both}
+@keyframes trace{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  section[id^=et_]:not([hidden]),.chip.pop,.pastilles i.faite::after,.coche svg{animation:none}
+  .pastilles i{transition:none}
+  .chip:active{transform:none}
+}
+.champ:last-child{margin-bottom:0}
+/* La question et la reponse ne peuvent pas avoir la meme voix. Tout au meme
+   poids, l'oeil ne sait plus ce qu'on lui demande et ce qu'on lui propose :
+   la question passe en gras et en encre pleine, les reponses restent plus
+   legeres. C'est ce qui permet de balayer une etape sans la lire. */
+label,.etiq{display:block;font:600 14px/1.35 var(--sans);color:var(--encre);margin:0 0 6px}
+.chip{font-weight:500;color:var(--encre-moyen)}
+input,select{font-weight:400}
+.aide{font:12px/1.4 var(--sans);color:var(--encre-doux);margin:-2px 0 6px}
+.oblig{color:var(--rouge);font-weight:600}
+/* 16 pixels, et pas moins : sous ce seuil, Safari sur iPhone zoome la page
+   des qu'on touche un champ, et le patient se retrouve a devoir la
+   repositionner apres chaque saisie. C'est la seule taille du formulaire
+   qu'on ne descend pas. */
+input[type=text],input[type=tel],input[type=email],input[type=number],select,textarea{
+  width:100%;padding:10px 12px;font:16px/1.4 var(--sans);color:var(--encre);
+  background:var(--blanc);border:1.5px solid var(--creme-ligne);border-radius:9px;
+  appearance:none;transition:border-color .15s,box-shadow .15s;
+}
+textarea{min-height:76px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--bleu);box-shadow:0 0 0 3px var(--bleu-pale)}
+input.err,select.err,textarea.err{border-color:var(--rouge);background:var(--rouge-pale)}
+.msg-err{display:none;color:var(--rouge);font:12.5px/1.4 var(--sans);margin-top:5px}
+.msg-err.on{display:block}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2354604A' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
+
+/* ── Chips et segments ───────────────────────────────────────────────────── */
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+/* ── La reponse parle moins fort que la question ─────────────────────────────
+   Les puces sont devenues la surface dominante du formulaire : deux cent
+   cinquante d'entre elles a l'ecran. A la meme taille que les questions,
+   elles saturaient la page et donnaient l'impression d'un mur a lire.
+
+   Douze et demi contre quatorze pour la question : l'ecart est petit, mais il
+   suffit a ce que l'oeil sache dans quel ordre lire. Les questions ne bougent
+   pas d'un point. */
+.chip{
+  font:500 12.5px/1.15 var(--sans);color:var(--encre-moyen);background:var(--blanc);
+  border:1.5px solid var(--creme-ligne);border-radius:99px;padding:7px 11px;cursor:pointer;
+  transition:background .16s,border-color .16s,color .16s,transform .12s;
+}
+.chip:active{transform:scale(.97)}
+.chip.on{background:var(--bleu);border-color:var(--bleu);color:#fff}
+.chips.err .chip{border-color:var(--rouge)}
+/* Suggestions : des chips qui ecrivent dans la zone de texte en dessous.
+   Elles ne remplacent pas la reponse du patient, elles l'amorcent. */
+.chips.suggest{margin:0 0 9px}
+.chips.suggest .chip{font-size:13px;padding:8px 12px}
+.chips.suggest .chip.on{background:var(--vert-pale);border-color:var(--vert);color:var(--encre-moyen)}
+.rangee-aucun{margin:0 0 8px}
+/* « None » se distingue des suggestions : c'est une reponse qui les annule. */
+.chip.aucun{border-style:dashed;color:var(--encre-doux)}
+.chip.aucun.on{background:var(--vert);border-color:var(--vert);border-style:solid;color:#fff}
+.chips .chip:disabled{opacity:.4;cursor:default}
+/* La regle des onze : jusqu'a onze reponses previsibles, des chips. */
+input::placeholder,textarea::placeholder{text-transform:none}
+/* La banniere d'installation, posee au-dessus de la barre du bas. */
+.installe{flex:0 0 auto;margin:0 10px 10px;background:var(--bleu-sombre);color:#fff;
+  border-radius:11px;padding:11px 13px;box-shadow:0 6px 20px rgba(14,19,13,.22);
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.installe-t{flex:1 1 190px;font:13.5px/1.4 var(--sans)}
+.installe-t b{font-weight:700}
+.installe-b{display:flex;gap:7px}
+.installe .mini{border-color:rgba(255,255,255,.5);color:#fff;background:transparent;
+  padding:8px 12px;font-size:12.5px}
+.installe .mini.plein{background:#fff;color:var(--bleu-sombre);border-color:#fff}
+/* Les puces de reponse, et la boite pour ce qui n'y figure pas. */
+.chips.rep{margin:0 0 2px}
+.chips.rep .chip{font-size:12.5px;padding:7px 11px}
+.chip-autre{border-style:dashed;color:var(--bleu);border-color:var(--bleu-clair)}
+.chip-libre{background:var(--vert);border-color:var(--vert);color:#fff}
+.chip-libre span{opacity:.75;margin-left:3px}
+.boite-autre{background:var(--blanc);border-radius:var(--rayon);padding:18px;
+  width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px}
+.boite-t{font:600 16px/1.35 var(--sans);color:var(--encre);margin:0}
+#autreTexte{width:100%;padding:13px 12px;border:1.5px solid var(--creme-ligne);
+  border-radius:9px;font:15px var(--sans);color:var(--encre);background:var(--blanc)}
+#autreTexte:focus{outline:none;border-color:var(--bleu)}
+.boite-b{display:flex;gap:9px;align-items:center}
+.boite-b .btn{flex:1;margin:0}
+/* Le recapitulatif de ce qui manque : il doit se voir sans etre une punition. */
+.bilan{background:var(--rouge-pale);border:1.5px solid var(--rouge);border-radius:var(--rayon);
+  padding:14px 15px;margin:0 0 14px}
+.bilan-t{font:600 15px/1.35 var(--sans);color:var(--rouge);margin:0 0 9px}
+.bilan-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.bilan-b{width:100%;text-align:left;background:var(--blanc);border:1px solid var(--creme-ligne);
+  border-radius:8px;padding:9px 11px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.bilan-b b{font:600 14px/1.3 var(--sans);color:var(--encre)}
+.bilan-b span{font:12.5px/1.35 var(--sans);color:var(--encre-doux)}
+.bilan-b:active{transform:scale(.99)}
+/* Le champ vers lequel on vient de sauter clignote une fois. */
+.vise{animation:vise 1.5s ease}
+@keyframes vise{0%,100%{box-shadow:none}18%,60%{box-shadow:0 0 0 4px var(--bleu-clair)}}
+@media (prefers-reduced-motion:reduce){ .vise{animation:none} }
+/* Le numero et « peut-on laisser un message » sur la meme ligne. */
+.champ.avec-msg{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}
+.champ.avec-msg .avec-msg-c{min-width:0}
+.champ.avec-msg .avec-msg-r{padding-bottom:1px}
+.champ.avec-msg .msg-err{grid-column:1/-1}
+.mini-etiq{font-size:11.5px !important;color:var(--encre-doux)}
+.aide.calcule{color:var(--vert);font-weight:500;margin-top:5px}
+@media (max-width:560px){
+  .champ.avec-msg{grid-template-columns:1fr;gap:7px}
+}
+.chips.liste-chips{margin:0 0 4px}
+.chips.liste-chips .chip{font-size:12.5px;padding:7px 11px}
+/* Au-dela de onze, une liste que la saisie filtre. */
+.combo{position:relative}
+.combo-liste{position:absolute;left:0;right:0;top:100%;z-index:30;margin-top:2px;
+  background:var(--blanc);border:1.5px solid var(--bleu);border-radius:9px;
+  max-height:236px;overflow-y:auto;box-shadow:var(--ombre);display:none}
+.combo.on .combo-liste{display:block}
+.combo-item{display:block;width:100%;text-align:left;border:0;background:none;
+  padding:11px 13px;font:14.5px/1.3 var(--sans);color:var(--encre-moyen);cursor:pointer;
+  border-bottom:1px solid var(--creme-clair)}
+.combo-item:last-child{border-bottom:0}
+.combo-item:hover{background:var(--bleu-pale)}
+.combo-item b{color:var(--bleu);font-weight:700}
+.combo-vide{padding:11px 13px;font:13px/1.4 var(--sans);color:var(--encre-doux)}
+/* Les barres segmentees ont ete retirees le 2026-09-07. Cinq boutons colles
+   bord a bord dans un cadre se lisent comme un tableau, pas comme un choix,
+   et sur un telephone chacun faisait quarante pixels de large pour un mot de
+   douze lettres. Ce sont des puces comme partout ailleurs. */
+@media(max-width:520px){.seg{flex-wrap:wrap}.seg button{flex:1 0 33%;border-bottom:1px solid var(--creme-ligne)}}
+.ouinon{display:flex;gap:8px}
+.ouinon .chip{flex:0 0 auto;min-width:78px;text-align:center}
+.ouinon .chip.on[data-v="No"]{background:var(--encre-doux);border-color:var(--encre-doux)}
+
+/* ── Cases a cocher ──────────────────────────────────────────────────────── */
+.case{display:flex;gap:11px;align-items:flex-start;padding:11px 12px;border:1.5px solid var(--creme-ligne);border-radius:9px;background:var(--blanc);cursor:pointer;margin:0 0 9px}
+.case.on{border-color:var(--vert);background:var(--vert-pale)}
+.case .bx{flex:0 0 20px;width:20px;height:20px;border:2px solid var(--creme-ligne);border-radius:5px;margin-top:1px;position:relative;background:#fff}
+.case.on .bx{background:var(--vert);border-color:var(--vert)}
+.case.on .bx:after{content:'';position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.case span{font:14.5px/1.45 var(--sans);color:var(--encre-moyen)}
+.grille-cases{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:600px){.grille-cases{grid-template-columns:1fr}}
+.grille-cases .case{margin:0}
+
+/* ── Conditionnels ───────────────────────────────────────────────────────── */
+.si{display:none;margin-top:12px;padding-left:13px;border-left:3px solid var(--bleu-clair)}
+.si.on{display:block;animation:ouvre .22s ease}
+@keyframes ouvre{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+
+/* ── Photos ──────────────────────────────────────────────────────────────── */
+/* Cinq blocs identiques empiles sur 974 pixels, avec dix boutons, sont
+   devenus une grille de vignettes et un seul bouton qui ouvre la camera une
+   fois pour les cinq. « Choose a file » a disparu : sur une tablette
+   d'accueil, la carte du patient est dans sa main, pas dans un dossier. */
+.photo-grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+.photo{border:2px dashed var(--creme-ligne);border-radius:10px;padding:10px;text-align:center;
+  background:var(--blanc);cursor:pointer;display:flex;flex-direction:column;gap:6px;
+  align-items:center;justify-content:flex-start;min-height:128px}
+.photo.on{border-style:solid;border-color:var(--vert);background:var(--vert-pale)}
+.photo img{width:100%;height:74px;object-fit:cover;border-radius:6px;display:block}
+.photo-vide{width:100%;height:74px;border-radius:6px;background:var(--creme-clair);
+  display:flex;align-items:center;justify-content:center;font:600 22px var(--sans);
+  color:var(--creme-ligne)}
+.photo.on .photo-vide{background:transparent}
+.photo-t{font:500 12.8px/1.25 var(--sans);color:var(--encre-moyen);margin:0}
+.photo-e{font:11.5px/1.2 var(--sans);color:var(--encre-doux)}
+.photo.on .photo-e{color:var(--vert);font-weight:600}
+
+.mini{font:500 13.5px/1 var(--sans);padding:10px 14px;border-radius:8px;border:1.5px solid var(--bleu);color:var(--bleu);background:var(--blanc);cursor:pointer}
+.mini.plein{background:var(--bleu);color:#fff}
+.mini.rouge{border-color:var(--rouge);color:var(--rouge)}
+input[type=file]{display:none}
+input[type=file].photo-input{display:block;position:absolute;width:1px;height:1px;
+  padding:0;margin:-1px;border:0;opacity:0;overflow:hidden;clip:rect(0 0 0 0);
+  white-space:nowrap;pointer-events:none}
+.photo-inputs{position:relative;height:0;overflow:hidden}
+label.photo{margin:0}
+
+/* ── Signature ───────────────────────────────────────────────────────────── */
+.pad{position:relative;border:1.5px solid var(--creme-ligne);border-radius:9px;background:var(--blanc);height:170px;overflow:hidden;touch-action:none}
+.pad.on{border-color:var(--vert)}
+.pad canvas{width:100%;height:100%;display:block;touch-action:none}
+.pad-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#B8B39E;font:16px var(--serif);pointer-events:none}
+.pad.on .pad-ph{display:none}
+.pad-l{position:absolute;left:16px;right:16px;bottom:38px;border-bottom:1px solid var(--creme-ligne);pointer-events:none}
+
+/* ── Le pave legal ───────────────────────────────────────────────────────── */
+.legal{border:1.5px solid var(--creme-ligne);border-radius:var(--rayon);background:var(--blanc);overflow:hidden}
+/* ── Un seul defilement ──────────────────────────────────────────────────────
+   Les sept documents vivaient dans une boite qui defilait toute seule, au
+   milieu d'une page qui defilait aussi. Deux barres, deux gestes, et le pouce
+   qui accroche la mauvaise : arrive au bas de la boite, le patient devait en
+   sortir pour continuer la page, et pour revenir il devait y rentrer.
+
+   Ils sont maintenant dans le flux, comme le reste. Un seul defilement, du
+   haut de l'etape au bouton de signature. La lecture se mesure sur la
+   position de la page, plus sur celle d'une boite. */
+.legal-def{padding:16px}
+.legal-ou{position:sticky;top:-1px;z-index:2;background:var(--bleu-pale);
+  border-bottom:1px solid var(--bleu-clair);padding:9px 14px;
+  font:600 12.5px/1.3 var(--sans);color:var(--bleu-sombre);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legal-def h4{font:600 15px/1.3 var(--serif);color:var(--bleu-sombre);margin:22px 0 2px}
+.legal-def h4:first-child{margin-top:0}
+.legal-def .st{font:12px/1.3 var(--sans);color:var(--encre-doux);margin:0 0 9px;text-transform:uppercase;letter-spacing:.05em}
+.legal-def p{font:13.5px/1.6 var(--sans);color:var(--encre-moyen);margin:0 0 9px}
+.legal-def li{font:13.5px/1.6 var(--sans);color:var(--encre-moyen);margin:0 0 6px}
+.legal-def ul{margin:0 0 10px;padding-left:19px}
+.legal-pied{position:sticky;bottom:-1px;z-index:2;border-top:1px solid var(--creme-ligne);
+  padding:10px 14px;background:var(--creme-clair);display:flex;align-items:center;gap:10px}
+.legal-jauge{flex:1;height:5px;background:var(--bleu-clair);border-radius:99px;overflow:hidden}
+.legal-jauge i{display:block;height:100%;width:0;background:var(--vert);transition:width .12s linear}
+.legal-etat{font:600 12px/1 var(--sans);color:var(--encre-doux);white-space:nowrap}
+.legal-etat.lu{color:var(--vert)}
+.case.bloque{opacity:.5;pointer-events:none}
+
+/* ── Recapitulatif ───────────────────────────────────────────────────────── */
+.recap{border:1px solid var(--creme-ligne);border-radius:var(--rayon);overflow:hidden;background:var(--blanc)}
+.recap-l{font:14.5px/1.5 var(--sans);color:var(--encre-moyen);padding:3px 0;border:0;display:block}
+.rappel-partage{background:var(--bleu-pale);border:1px solid var(--bleu-clair);
+  border-radius:9px;padding:11px 13px;margin:0 0 4px;
+  font:13.5px/1.45 var(--sans);color:var(--bleu-sombre)}
+.rappel-partage .lien{margin-left:6px}
+.recap-vieux{display:flex;justify-content:space-between;gap:12px;padding:10px 13px;border-bottom:1px solid var(--creme-clair);font-size:14px}
+.recap-l:last-child{border-bottom:0}
+.recap-l b{font:500 13px/1.4 var(--sans);color:var(--encre-doux);flex:0 0 42%}
+.recap-l span{text-align:right;color:var(--encre)}
+.lien{background:none;border:0;color:var(--bleu);font:500 13.5px var(--sans);text-decoration:underline;cursor:pointer;padding:0}
+
+/* ── Barre d'action ──────────────────────────────────────────────────────── */
+/* ── La barre d'action ───────────────────────────────────────────────
+   Fond plein plutot que translucide : le flou coutait cher a chaque image de
+   defilement sur une tablette d'entree de gamme, et laissait deviner le texte
+   dessous, ce qui brouillait la lecture du bouton. « Back » se contente de
+   sa largeur, « Continue » prend le reste : c'est lui qu'on vise du pouce. */
+.barre{flex:0 0 auto;z-index:40;background:var(--blanc);
+  border-top:1px solid var(--creme-ligne);
+  box-shadow:0 -2px 14px rgba(14,19,13,.06);
+  padding:10px 13px calc(10px + env(safe-area-inset-bottom))}
+.barre-in{max-width:720px;margin:0 auto;display:flex;gap:9px;align-items:stretch}
+.btn{flex:1;padding:15px 18px;font:600 16px/1 var(--sans);border:0;border-radius:10px;cursor:pointer;transition:transform .12s,opacity .15s}
+#btnPrec{flex:0 0 auto;min-width:86px;padding-left:16px;padding-right:16px}
+.btn:active{transform:scale(.985)}
+.btn-p{background:var(--bleu);color:#fff}
+.btn-p:disabled{opacity:.5;cursor:not-allowed}
+.btn-s{flex:0 0 auto;background:var(--blanc);color:var(--encre-moyen);border:1.5px solid var(--creme-ligne);padding:15px 20px}
+
+/* ── Ecrans pleins ───────────────────────────────────────────────────────── */
+.plein{text-align:center;padding:44px 20px}
+.plein h2{font-size:24px;margin-bottom:10px}
+.plein p{color:var(--encre-doux);max-width:430px;margin:0 auto 18px;font-size:15px}
+.anneau{width:132px;height:132px;margin:0 auto 22px;position:relative}
+.anneau svg{transform:rotate(-90deg)}
+.anneau .fond{stroke:var(--bleu-clair)}
+.anneau .arc{stroke:var(--bleu);stroke-linecap:round;stroke-dasharray:339.3;stroke-dashoffset:0}
+.anneau b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:600 30px var(--serif);color:var(--bleu-sombre)}
+.coche{width:76px;height:76px;margin:0 auto 18px;border-radius:50%;background:var(--vert-pale);display:flex;align-items:center;justify-content:center}
+.coche svg{stroke:var(--vert);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Divers ──────────────────────────────────────────────────────────────── */
+.note{background:var(--creme);border-left:3px solid var(--vert);border-radius:0 9px 9px 0;padding:12px 14px;font:13.5px/1.5 var(--sans);color:var(--encre-moyen);margin:0 0 16px}
+.note.rouge{background:var(--rouge-pale);border-left-color:var(--rouge)}
+.note.staff{background:#FFF6E5;border-left-color:var(--ambre)}
+.sauve{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--encre-moyen);color:#fff;font:500 13px var(--sans);padding:9px 15px;border-radius:99px;opacity:0;pointer-events:none;transition:all .3s;z-index:50}
+.sauve.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.modale{position:fixed;inset:0;z-index:100;background:rgba(14,19,13,.9);display:none;flex-direction:column;align-items:center;justify-content:center;padding:18px}
+.modale.on{display:flex}
+.modale video{width:100%;max-width:540px;border-radius:var(--rayon);background:#000}
+.modale p{color:#fff;font:14.5px/1.5 var(--sans);text-align:center;max-width:430px;margin:14px auto}
+.ligne-dyn{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:0 0 8px;align-items:start}
+.sup{background:none;border:1.5px solid var(--creme-ligne);border-radius:8px;color:var(--rouge);font-size:19px;line-height:1;padding:9px 13px;cursor:pointer}
+.hors-ligne{background:var(--ambre);color:#fff;text-align:center;font:500 13px var(--sans);padding:8px 14px}
+</style>
+</head>
+<body>
+
+<header class="mast" id="mast" hidden>
+  <div class="mast-in">
+    <img class="header-logo" id="logoMast" alt="" src="assets/ability-logo.png">
+    <div style="flex:1">
+      <div class="mast-t">New Client Admission</div>
+      <div class="mast-s" id="mastEtape">Step 1 of 12</div>
+    </div>
+  </div>
+  <!-- Une barre pleine ne dit pas combien d'etapes il reste. Douze pastilles,
+       si, et chacune se remplit en passant. -->
+  <div class="pastilles" id="pastilles"></div>
+  <div class="jauge"><i id="jaugeBarre"></i></div>
+  <div class="compte"><span id="mastTitre">About you</span><span id="mastReste">~15 min left</span></div>
+</header>
+
+<div class="hors-ligne" id="bandeauQueue" hidden></div>
+
+<main>
+
+<!-- ══════════════════════════ ACCUEIL ══════════════════════════ -->
+<section id="accueil">
+  <div style="text-align:center;padding:22px 0 8px">
+    <img class="intro-logo" src="assets/ability-logo.png" alt="Ability and Empowerment Services" style="width:88px;height:88px;border-radius:50%">
+  </div>
+  <h1 style="text-align:center">New Client Admission</h1>
+  <p class="chapeau" style="text-align:center">Ability and Empowerment Services, INC<br>1 N Charles Street, Baltimore, MD 21201</p>
+
+  <div class="carte">
+    <h3>Before you begin</h3>
+    <p style="margin:0 0 12px;font-size:14.5px;color:var(--encre-moyen)">This replaces the paper admission packet. It takes <b id="dureeAnnoncee">about 15 minutes</b>, and it covers every form the clinic needs: both consents to treatment, the intake questionnaire, your emergency contacts, HIPAA, telehealth, and information sharing.</p>
+    <p style="margin:0 0 12px;font-size:14.5px;color:var(--encre-moyen)"><b>You only enter each answer once.</b> Your name, date of birth, address and insurance are carried across every form, and you sign a single time at the end.</p>
+    <div class="note">Have these ready: your <b>photo ID</b> and your <b>insurance card</b>. You will photograph the front and back of each.</div>
+    <p style="margin:0;font-size:13.5px;color:var(--encre-doux)" id="motSauvegarde">Your answers are saved as you go. Close the page and pick up where you stopped.</p>
+  </div>
+
+  <div class="carte" id="reprise" hidden>
+    <h3>Unfinished form</h3>
+    <p style="margin:0 0 12px;font-size:14.5px">We found answers you started earlier<span id="repriseQuand"></span>.</p>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+      <button class="mini plein" type="button" id="btnReprendre">Continue where I stopped</button>
+      <button class="mini rouge" type="button" id="btnRepartir">Start over</button>
+    </div>
+  </div>
+
+  <button class="btn btn-p" type="button" id="btnDemarrer" style="width:100%;margin-top:6px">Start</button>
+  <p style="text-align:center;font-size:12.5px;color:var(--encre-doux);margin-top:16px">Confidential. Protected health information.<br>If you are in crisis, call or text <b>988</b>.</p>
+</section>
+
+<!-- ══════════════════════════ 1. YOU ══════════════════════════ -->
+<section id="et_identite" hidden>
+  <h2>About you</h2>
+  <p class="chapeau">Who you are.</p>
+
+
+  <div class="carte">
+    <h3>Your name</h3>
+    <div class="duo">
+      <div class="champ"><label for="first_name">First name <span class="oblig">*</span></label><input type="text" id="first_name"><div class="msg-err" id="e_first_name"></div></div>
+      <div class="champ"><label for="last_name">Last name <span class="oblig">*</span></label><input type="text" id="last_name"><div class="msg-err" id="e_last_name"></div></div>
+    </div>
+    <div class="duo">
+      <div class="champ"><label for="date_of_birth">Date of birth <span class="oblig">*</span></label><input type="tel" id="date_of_birth" placeholder="MM/DD/YYYY" inputmode="numeric" maxlength="10"><div class="aide calcule" id="noteAge" hidden></div><div class="msg-err" id="e_date_of_birth"></div></div>
+      <div class="champ"><label for="ssn">SSN</label><input type="tel" id="ssn" placeholder="Leave blank if you do not have one" inputmode="numeric" maxlength="11"><div class="msg-err" id="e_ssn"></div></div>
+    </div>
+    <!-- L'age est calcule, pas saisi. Dans un trio de champs il ressemblait a
+         une case a remplir et le patient s'arretait dessus. Il reste dans le
+         document et dans le payload, mais il s'affiche en mention. -->
+    <input type="hidden" id="age">
+        <div class="champ"><span class="etiq">Gender <span class="oblig">*</span></span>
+      <div class="chips" id="c_gender" data-champ="gender">
+        <button type="button" class="chip" data-v="Male">Male</button>
+        <button type="button" class="chip" data-v="Female">Female</button>
+        <button type="button" class="chip" data-v="Non-binary">Non-binary</button>
+        <button type="button" class="chip" data-v="Prefer not to say">Prefer not to say</button>
+      </div><div class="msg-err" id="e_gender"></div>
+    </div>
+    <div class="champ" id="bloc_marital"><span class="etiq">Marital status</span>
+      <div class="chips" id="c_marital_status" data-champ="marital_status">
+        <button type="button" class="chip" data-v="Never Married">Never married</button>
+        <button type="button" class="chip" data-v="Domestic Partnership">Domestic partnership</button>
+        <button type="button" class="chip" data-v="Married">Married</button>
+        <button type="button" class="chip" data-v="Separated">Separated</button>
+        <button type="button" class="chip" data-v="Divorced">Divorced</button>
+        <button type="button" class="chip" data-v="Widowed">Widowed</button>
+      </div>
+    </div>
+    <div class="si" id="si_guardian">
+      <div class="note">You are under 18, so we need your parent or legal guardian.</div>
+      <div class="champ"><label for="guardian_name">Parent or legal guardian <span class="oblig">*</span></label><input type="text" id="guardian_name"><div class="msg-err" id="e_guardian_name"></div></div>
+    </div>
+  </div>
+
+</section>
+
+<section id="et_contact" hidden>
+  <h2>How we reach you</h2>
+  <p class="chapeau">How we reach you.</p>
+
+  <div class="carte">
+    <h3>How we reach you</h3>
+    <!-- « May we leave a message ? » retiree de l'ecran le 2026-09-06, a la
+         demande de Yanis : le cabinet appelle en cas d'urgence, il ne laisse
+         pas de messages. La ligne reste dans le document imprime, vide, comme
+         sur un formulaire papier non rempli. Rien n'est repondu a la place du
+         patient. Voir la note du README avant de la remettre. -->
+    <div class="champ">
+      <label for="home_phone">Home phone</label>
+      <input type="tel" id="home_phone" placeholder="(410) 555-0100" inputmode="numeric" maxlength="14">
+      <div class="msg-err" id="e_home_phone"></div>
+    </div>
+    <div class="champ">
+      <label for="cell_phone">Cell / work / other phone <span class="oblig">*</span></label>
+      <input type="tel" id="cell_phone" placeholder="(443) 555-0100" inputmode="numeric" maxlength="14">
+      <div class="msg-err" id="e_cell_phone"></div>
+    </div>
+    <div class="champ">
+      <label for="email">Email</label>
+      <input type="email" id="email" inputmode="email" placeholder="name@example.com">
+      <div class="aide">Email is not a confidential medium of communication.</div>
+      <div class="msg-err" id="e_email"></div>
+    </div>
+    <!-- Doublon retire le 2026-09-05 : ce numero est celui du contact
+         d'urgence, demande a l'etape 2. Le champ reste, invisible, et se
+         remplit tout seul ; les deux documents qui l'impriment ne voient
+         aucune difference. -->
+    <input type="hidden" id="emergency_phone">
+  </div>
+
+  <div class="carte">
+    <h3>Your address</h3>
+    <div class="duo">
+      <div class="champ"><label for="address_street">Street <span class="oblig">*</span></label><input type="text" id="address_street"><div class="msg-err" id="e_address_street"></div></div>
+      <div class="champ"><label for="address_apt">Apt / unit</label><input type="text" id="address_apt"></div>
+    </div>
+    <div class="trio">
+      <div class="champ"><label for="address_city">City <span class="oblig">*</span></label><input type="text" id="address_city" data-liste="villes"><div class="msg-err" id="e_address_city"></div></div>
+      <div class="champ"><label for="address_state">State <span class="oblig">*</span></label><input type="text" id="address_state" placeholder="MD" data-liste="etats" maxlength="2" placeholder="MD" style="text-transform:uppercase"><div class="msg-err" id="e_address_state"></div></div>
+      <div class="champ"><label for="address_zip">ZIP <span class="oblig">*</span></label><input type="tel" id="address_zip" inputmode="numeric" maxlength="5"><div class="msg-err" id="e_address_zip"></div></div>
+    </div>
+  </div>
+
+</section>
+
+<section id="et_couverture" hidden>
+  <h2>Insurance and photos</h2>
+  <p class="chapeau">Your coverage, and the cards in your hand.</p>
+
+  <div class="carte">
+    <h3>Insurance and referral</h3>
+    <div id="bloc_assurance">
+      <div class="champ"><label for="insurance_primary">Insurance (primary) <span class="oblig">*</span></label><input type="text" id="insurance_primary" data-liste="assureurs" placeholder="Start typing, or pick “Self-pay” from the list"><div class="msg-err" id="e_insurance_primary"></div></div>
+      <div class="duo">
+        <div class="champ"><label for="insurance_member_id">Member ID</label><input type="text" id="insurance_member_id"><div class="aide">If it is hard to read, leave it: it is on the card you photographed.</div></div>
+        <div class="champ"><label for="insurance_secondary">Insurance (secondary)</label><input type="text" id="insurance_secondary" data-liste="assureurs"></div>
+      </div>
+    </div>
+    <div class="champ"><label for="referred_by">Referred by (if any)</label><input type="text" id="referred_by" data-liste="orientation"></div>
+  </div>
+
+  <div class="carte">
+    <h3>Photographs</h3>
+    <p class="aide" style="margin-bottom:14px">The whole card in frame, text readable.</p>
+    <div id="zonePhotos"></div>
+    <div class="msg-err" id="e_photos"></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ 2. CARE TEAM ══════════════════════════ -->
+<section id="et_urgence" hidden>
+  <h2>Your care team</h2>
+  <p class="chapeau">Who we call if something happens.</p>
+
+  <div class="carte">
+    <h3>Emergency contact</h3>
+    <div class="champ"><label for="ec1_name">Full name(s) <span class="oblig">*</span></label>
+      <input type="text" id="ec1_name" placeholder="You can name more than one person">
+      <div class="msg-err" id="e_ec1_name"></div></div>
+    <div class="champ"><span class="etiq">Relationship to you <span class="oblig">*</span></span>
+      <div class="chips rep" id="c_ec1_relationship" data-rep="ec1_relationship" data-liste="relationsContact"></div>
+      <input type="hidden" id="ec1_relationship"><div class="msg-err" id="e_ec1_relationship"></div></div>
+    <!-- Un seul numero. « A.M. » et « P.M. » faisaient deux champs pour une
+         personne qu'on appelle en urgence, a l'heure ou l'urgence tombe. -->
+    <div class="champ"><label for="ec1_phone_am">Phone <span class="oblig">*</span></label>
+      <input type="tel" id="ec1_phone_am" inputmode="numeric" maxlength="14" placeholder="(410) 555-0100">
+      <div class="msg-err" id="e_ec1_phone_am"></div></div>
+    <button type="button" class="mini" style="margin:2px 0 10px" data-copie-adresse="ec1">Same address as mine</button>
+    <div class="duo">
+      <div class="champ"><label for="ec1_street">Street</label><input type="text" id="ec1_street"></div>
+      <div class="champ"><label for="ec1_apt">Apt / unit</label><input type="text" id="ec1_apt"></div>
+    </div>
+    <div class="trio">
+      <div class="champ"><label for="ec1_city">City</label><input type="text" id="ec1_city" data-liste="villes"></div>
+      <div class="champ"><label for="ec1_state">State</label><input type="text" id="ec1_state" placeholder="MD" data-liste="etats" maxlength="2" style="text-transform:uppercase"></div>
+      <div class="champ"><label for="ec1_zip">ZIP</label><input type="tel" id="ec1_zip" inputmode="numeric" maxlength="5"></div>
+    </div>
+  </div>
+
+  <!-- Un second contact, seulement si le patient en a un. Le bloc n'existe
+       pas tant qu'il ne le demande pas : neuf champs ouverts d'avance sont
+       neuf champs que la plupart des gens font defiler pour rien. -->
+  <button type="button" class="mini" id="btnAjouterContact" style="width:100%;margin:0 0 12px">+ Add another emergency contact</button>
+  <div class="carte" id="carteEc2" hidden>
+    <h3>Second emergency contact</h3>
+    <div class="champ"><label for="ec2_name">Full name</label><input type="text" id="ec2_name"></div>
+    <div class="champ"><span class="etiq">Relationship to you</span>
+      <div class="chips rep" id="c_ec2_relationship" data-rep="ec2_relationship" data-liste="relationsContact"></div>
+      <input type="hidden" id="ec2_relationship"></div>
+    <div class="champ"><label for="ec2_phone_am">Phone</label>
+      <input type="tel" id="ec2_phone_am" inputmode="numeric" maxlength="14" placeholder="(410) 555-0100"></div>
+    <button type="button" class="mini" style="margin:2px 0 10px" data-copie-adresse="ec2">Same address as mine</button>
+    <div class="duo">
+      <div class="champ"><label for="ec2_street">Street</label><input type="text" id="ec2_street"></div>
+      <div class="champ"><label for="ec2_apt">Apt / unit</label><input type="text" id="ec2_apt"></div>
+    </div>
+    <div class="trio">
+      <div class="champ"><label for="ec2_city">City</label><input type="text" id="ec2_city" data-liste="villes"></div>
+      <div class="champ"><label for="ec2_state">State</label><input type="text" id="ec2_state" placeholder="MD" data-liste="etats" maxlength="2" style="text-transform:uppercase"></div>
+      <div class="champ"><label for="ec2_zip">ZIP</label><input type="tel" id="ec2_zip" inputmode="numeric" maxlength="5"></div>
+    </div>
+  </div>
+
+</section>
+
+<section id="et_medecin" hidden>
+  <h2>Your doctor</h2>
+  <p class="chapeau">Who looks after your body.</p>
+
+  <div class="carte">
+    <h3>Your doctor</h3>
+    <!-- Deux cases independantes se contredisaient : « je n'en ai pas, je vais
+         en trouver un » et « je n'ai pas les moyens » etaient cochables
+         ensemble, ce qui produisait une declaration impossible dans un
+         document signe. Une question, trois reponses. Le document imprime
+         garde les phrases du cabinet, mot pour mot. -->
+    <p class="aide" style="margin-bottom:12px">If not, we stop asking here.</p>
+    <div class="champ"><span class="etiq">Do you have a primary care physician? <span class="oblig">*</span></span>
+      <div class="chips" id="c_pcp_statut" data-champ="pcp_statut">
+        <button type="button" class="chip" data-v="has">Yes, I have one</button>
+        <button type="button" class="chip" data-v="none">No — I will find one and arrange a physical</button>
+        <button type="button" class="chip" data-v="afford">No — I cannot afford physician health care</button>
+      </div><div class="msg-err" id="e_pcp_statut"></div>
+    </div>
+    <div id="bloc_pcp" style="margin-top:12px">
+      <div class="duo">
+        <div class="champ"><label for="pcp_name">Physician name</label><input type="text" id="pcp_name"></div>
+        <div class="champ"><label for="pcp_phone">Phone number</label><input type="tel" id="pcp_phone" inputmode="numeric" maxlength="14"></div>
+      </div>
+      <div class="champ"><label for="pcp_address">Address</label><input type="text" id="pcp_address"></div>
+    </div>
+  </div>
+
+  <!-- Les allergies vivaient sous le titre « Primary care physician ». Un
+       patient qui declare ne pas avoir de medecin ne s'attend pas a ce que la
+       suite de la carte le concerne encore. -->
+  <div class="carte">
+    <h3>Allergies and conditions</h3>
+    <!-- Une porte d'entree plutot que deux champs vides. Qui repond « non »
+         ne voit jamais les deux listes, et le dossier imprime porte « None »
+         aux deux endroits, comme s'il les avait remplies. -->
+    <div class="champ"><span class="etiq">Do you have any allergies, or any ongoing medical conditions? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="medical_any"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="msg-err" id="e_medical_any"></div>
+    </div>
+    <div class="si" id="si_medical">
+      <div class="champ"><span class="etiq">Allergies</span>
+        <div class="chips rep" data-rep="allergies" data-liste="allergies" data-multi data-aucun="None"></div>
+        <input type="hidden" id="allergies"><div class="msg-err" id="e_allergies"></div></div>
+      <div class="champ"><span class="etiq">Known medical conditions</span>
+        <div class="chips rep" data-rep="medical_conditions" data-liste="pathologies" data-multi data-aucun="None"></div>
+        <input type="hidden" id="medical_conditions"><div class="msg-err" id="e_medical_conditions"></div></div>
+    </div>
+  </div>
+
+  <!-- La carte « Community support » a ete retiree le 2026-09-06. Elle
+       redemandait, sous un autre titre, la personne que le patient venait de
+       nommer comme contact d'urgence : meme nom, meme lien, meme telephone.
+       Le dossier papier garde sa section ; elle se remplit desormais du
+       premier contact d'urgence. Si le cabinet veut vraiment deux personnes
+       distinctes, le bouton « + Add another emergency contact » est la. -->
+</section>
+
+<!-- ══════════════════════════ 3. HEALTH ══════════════════════════ -->
+<section id="et_corps" hidden>
+  <h2>Your health</h2>
+  <p class="chapeau">None of this changes whether you are accepted.</p>
+
+  <div class="carte">
+    <h3>Physical health and sleep</h3>
+    <div class="champ"><span class="etiq">How would you rate your current physical health? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="physical_health_rating">
+        <button type="button" class="chip" data-v="Poor">Poor</button><button type="button" class="chip" data-v="Unsatisfactory">Unsatisfactory</button><button type="button" class="chip" data-v="Satisfactory">Satisfactory</button><button type="button" class="chip" data-v="Good">Good</button><button type="button" class="chip" data-v="Very good">Very good</button>
+      </div><div class="msg-err" id="e_physical_health_rating"></div>
+    </div>
+    <div class="champ"><span class="etiq">Any specific health problems right now?</span>
+        <div class="chips rep" data-rep="physical_health_problems" data-liste="santePhysique" data-multi data-aucun="None"></div>
+        <input type="hidden" id="physical_health_problems"><div class="msg-err" id="e_physical_health_problems"></div></div>
+    <div class="champ"><span class="etiq">How would you rate your current sleeping habits? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="sleep_rating">
+        <button type="button" class="chip" data-v="Poor">Poor</button><button type="button" class="chip" data-v="Unsatisfactory">Unsatisfactory</button><button type="button" class="chip" data-v="Satisfactory">Satisfactory</button><button type="button" class="chip" data-v="Good">Good</button><button type="button" class="chip" data-v="Very good">Very good</button>
+      </div><div class="msg-err" id="e_sleep_rating"></div>
+    </div>
+    <div class="champ"><span class="etiq">Any specific sleep problems?</span>
+        <div class="chips rep" data-rep="sleep_problems" data-liste="sommeil" data-multi data-aucun="None"></div>
+        <input type="hidden" id="sleep_problems"><div class="msg-err" id="e_sleep_problems"></div></div>
+    <div class="champ"><label for="exercise_frequency">Times per week you exercise</label><input type="tel" id="exercise_frequency" inputmode="numeric" maxlength="2" placeholder="0"></div>
+    <div class="si" id="si_sport"><div class="champ"><label for="exercise_types">What kind?</label><input type="text" id="exercise_types" data-liste="exercice" placeholder="Walking, gym, swimming…"></div></div>
+    <div class="champ"><span class="etiq">Any difficulty with appetite or eating?</span>
+        <div class="chips rep" data-rep="appetite_problems" data-liste="appetit" data-multi data-aucun="None"></div>
+        <input type="hidden" id="appetite_problems"><div class="msg-err" id="e_appetite_problems"></div></div>
+  </div>
+
+</section>
+
+<section id="et_esprit" hidden>
+  <h2>How you have been feeling</h2>
+  <p class="chapeau">No wrong answers here.</p>
+
+  <div class="carte">
+    <h3>Previous care</h3>
+    <div class="champ"><span class="etiq">Have you previously received any type of mental health services? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="prior_mh_services" data-si="si_prior"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="msg-err" id="e_prior_mh_services"></div>
+      <div class="si" id="si_prior"><div class="champ"><label for="prior_practitioner">Previous therapist or practitioner</label><input type="text" id="prior_practitioner"></div></div>
+    </div>
+    <div class="champ"><span class="etiq">Are you currently taking any prescription medication? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="current_meds" data-si="si_meds"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="msg-err" id="e_current_meds"></div>
+      <div class="si" id="si_meds"><div class="champ"><span class="etiq">Which ones?</span>
+        <div class="chips rep" data-rep="current_meds_list" data-liste="medicaments" data-multi></div>
+        <input type="hidden" id="current_meds_list"><div class="msg-err" id="e_current_meds_list"></div></div></div>
+    </div>
+    <div class="champ"><span class="etiq">Have you ever been prescribed psychiatric medication?</span>
+      <div class="chips ouinon" data-champ="psych_meds_ever" data-si="si_psych"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="si" id="si_psych"><div class="champ"><span class="etiq">Which ones?</span>
+        <div class="chips rep" data-rep="psych_meds_list" data-liste="medicaments" data-multi></div>
+        <input type="hidden" id="psych_meds_list"><div class="msg-err" id="e_psych_meds_list"></div></div></div>
+    </div>
+  </div>
+
+  <div class="carte">
+    <h3>Mood, anxiety and pain</h3>
+    <div class="champ"><span class="etiq">Are you currently experiencing overwhelming sadness, grief or depression? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="depression" data-si="si_depression"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="msg-err" id="e_depression"></div>
+      <div class="si" id="si_depression"><div class="champ"><label for="depression_duration">For roughly how long?</label><input type="text" id="depression_duration" data-liste="duree" placeholder="Three months, about a year…"></div></div>
+    </div>
+    <div class="champ"><span class="etiq">Are you currently experiencing anxiety, panic attacks or phobias? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="anxiety" data-si="si_anxiety"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="msg-err" id="e_anxiety"></div>
+      <div class="si" id="si_anxiety"><div class="champ"><label for="anxiety_onset">When did it begin?</label><input type="text" id="anxiety_onset" data-liste="duree"></div></div>
+    </div>
+    <div class="champ"><span class="etiq">Are you currently experiencing any chronic pain?</span>
+      <div class="chips ouinon" data-champ="chronic_pain" data-si="si_pain"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="si" id="si_pain"><div class="champ"><span class="etiq">Where is the pain?</span>
+        <div class="chips rep" data-rep="chronic_pain_describe" data-liste="douleur" data-multi></div>
+        <input type="hidden" id="chronic_pain_describe"><div class="msg-err" id="e_chronic_pain_describe"></div></div></div>
+    </div>
+    <div class="note rouge" id="blocCrise" hidden>If you are thinking about harming yourself, please call or text <b>988</b> now, or go to your nearest emergency room. You do not have to finish this form first.</div>
+  </div>
+
+  <div class="carte">
+    <h3>Alcohol and substances</h3>
+    <div class="champ"><span class="etiq">Do you drink alcohol more than once a week?</span>
+      <div class="chips ouinon" data-champ="alcohol_weekly"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+    </div>
+    <div class="champ"><span class="etiq">How often do you engage in recreational drug use? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="drug_use_frequency">
+        <button type="button" class="chip" data-v="Daily">Daily</button><button type="button" class="chip" data-v="Weekly">Weekly</button><button type="button" class="chip" data-v="Monthly">Monthly</button><button type="button" class="chip" data-v="Infrequently">Infrequently</button><button type="button" class="chip" data-v="Never">Never</button>
+      </div><div class="msg-err" id="e_drug_use_frequency"></div>
+    </div>
+  </div>
+
+</section>
+
+<section id="et_entourage" hidden>
+  <h2>Relationships and family</h2>
+  <p class="chapeau">The people around you.</p>
+
+  <div class="carte">
+    <h3>Relationships and recent events</h3>
+    <div class="champ" id="bloc_romance"><span class="etiq">Are you currently in a romantic relationship?</span>
+      <div class="chips ouinon" data-champ="relationship" data-si="si_rel"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="si" id="si_rel">
+        <div class="champ"><span class="etiq">For how long?</span>
+          <div class="chips rep" data-rep="relationship_duration" data-liste="duree"></div>
+          <input type="hidden" id="relationship_duration"></div>
+        <div class="champ"><span class="etiq">How would you rate it, from 1 to 10?</span>
+          <div class="chips rep notes" data-rep="relationship_rating" data-liste="notes"></div>
+          <input type="hidden" id="relationship_rating"></div>
+      </div>
+    </div>
+    <div class="champ"><span class="etiq">Any big changes or stressful events lately?</span>
+      <div class="chips rep" data-rep="life_changes" data-liste="evenements" data-multi></div>
+      <input type="hidden" id="life_changes"><div class="msg-err" id="e_life_changes"></div></div>
+  </div>
+
+  <div class="carte">
+    <h3>Family mental health history</h3>
+    <p class="aide" style="margin-bottom:12px">Tap what runs in your family.</p>
+    <div class="chips" id="grilleFamille"></div>
+    <button type="button" class="mini" id="btnFamilleAucun" style="margin-top:11px">None of these</button>
+    <div id="famillePrecisions" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ 4. ABOUT YOU ══════════════════════════ -->
+<section id="et_vous" hidden>
+  <h2>A little more about you</h2>
+  <p class="chapeau">What you bring, and what you want.</p>
+
+  <div class="carte">
+    <h3>Work and beliefs</h3>
+    <div class="champ" id="bloc_emploi"><span class="etiq">Are you currently employed? <span class="oblig">*</span></span>
+      <div class="chips ouinon" data-champ="employed"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="msg-err" id="e_employed"></div>
+      <div class="si" id="si_emploi">
+        <div class="champ"><label for="employment_situation">What is your current employment situation?</label><input type="text" id="employment_situation" data-liste="emploi"></div>
+        <div class="champ"><span class="etiq">How is your work?</span>
+        <div class="chips rep" data-rep="work_feelings" data-liste="travail" data-multi></div>
+        <input type="hidden" id="work_feelings"><div class="msg-err" id="e_work_feelings"></div></div>
+      </div>
+      <div class="si" id="si_sans_emploi">
+        <div class="champ"><label for="other_income">Other source of income, if any</label><input type="text" id="other_income" data-liste="revenu"></div>
+      </div>
+    </div>
+    <div class="champ"><span class="etiq">Do you consider yourself spiritual or religious?</span>
+      <div class="chips ouinon" data-champ="spiritual" data-si="si_foi"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="si" id="si_foi"><div class="champ"><label for="faith_describe">Describe your faith or belief</label><input type="text" id="faith_describe" data-liste="foi"></div></div>
+    </div>
+  </div>
+
+  <div class="carte">
+    <h3>You, in your own words</h3>
+    <p class="aide" style="margin-bottom:12px">Tap what sounds like you.</p>
+    <div class="champ"><span class="etiq">What do you consider some of your strengths? <span class="oblig">*</span></span>
+      <div class="chips rep" data-rep="strengths" data-liste="forces" data-multi></div>
+      <input type="hidden" id="strengths"><div class="msg-err" id="e_strengths"></div></div>
+    <div class="champ"><span class="etiq">And some of your weaknesses?</span>
+      <div class="chips rep" data-rep="weaknesses" data-liste="faiblesses" data-multi></div>
+      <input type="hidden" id="weaknesses"></div>
+    <div class="champ"><span class="etiq">What would you like to get out of therapy? <span class="oblig">*</span></span>
+      <div class="chips rep" data-rep="therapy_goals" data-liste="objectifs" data-multi></div>
+      <input type="hidden" id="therapy_goals"><div class="msg-err" id="e_therapy_goals"></div></div>
+  </div>
+
+</section>
+
+<section id="et_famille" hidden>
+  <h2>Where you come from</h2>
+  <p class="chapeau">Skip anything you would rather not answer.</p>
+
+  <div class="carte">
+    <h3>Family of origin</h3>
+    <div class="duo">
+      <div class="champ"><label for="mother_name">Mother’s name</label><input type="text" id="mother_name"></div>
+      <div class="champ"><span class="etiq">Alive?</span><div class="chips ouinon" data-champ="mother_alive"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div></div>
+    </div>
+    <div class="si" id="si_mother_age"><div class="champ"><label for="mother_age">Age</label><input type="tel" id="mother_age" inputmode="numeric" maxlength="3"></div></div>
+    <div class="champ"><label for="mother_relationship">Nature of your relationship</label><input type="text" id="mother_relationship" data-liste="lienParent"></div>
+    <div class="duo">
+      <div class="champ"><label for="father_name">Father’s name</label><input type="text" id="father_name"></div>
+      <div class="champ"><span class="etiq">Alive?</span><div class="chips ouinon" data-champ="father_alive"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div></div>
+    </div>
+    <div class="si" id="si_father_age"><div class="champ"><label for="father_age">Age</label><input type="tel" id="father_age" inputmode="numeric" maxlength="3"></div></div>
+    <div class="champ"><label for="father_relationship">Nature of your relationship</label><input type="text" id="father_relationship" data-liste="lienParent"></div>
+    <div class="champ"><span class="etiq">Brothers and sisters</span>
+        <div class="chips rep" data-rep="siblings" data-liste="fratrie" data-multi data-aucun="No siblings"></div>
+        <input type="hidden" id="siblings"><div class="msg-err" id="e_siblings"></div></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ 5. SHARING ══════════════════════════ -->
+<section id="et_partage" hidden>
+  <h2>Sharing your information</h2>
+  <p class="chapeau">Who else may see your file, and what.</p>
+
+  <!-- Le refus global d'echange a rejoint la page de signature le
+       2026-09-07 : c'est un accord, et tous les accords se donnent au meme
+       endroit, celui ou le patient lit avant de signer. En tete de cette
+       etape, il coupait la parole a la question qu'elle pose. -->
+  <!-- Une porte d'entree, posee le 2026-09-07. La plupart des patients n'ont
+       personne a qui faire transmettre leur dossier : leur demander le nom,
+       l'adresse, le telephone et le fax d'une agence qui n'existe pas, puis
+       onze puces et une duree, c'est une etape entiere de questions sans
+       objet. « No » repond a tout. -->
+  <div class="carte">
+    <div class="champ" style="margin:0"><span class="etiq">Is there anyone the clinic should share your file with? <span class="oblig">*</span></span>
+      <p class="aide">Another therapist, a doctor, a case manager, a school, a court.</p>
+      <div class="chips ouinon" data-champ="exchange_any"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No, nobody</button></div>
+      <div class="msg-err" id="e_exchange_any"></div>
+    </div>
+  </div>
+
+  <div id="bloc_echange">
+    <div class="carte">
+      <h3>Who we may exchange with</h3>
+      <div class="duo">
+        <div class="champ"><label for="exchange_agency_name">Name or agency</label><input type="text" id="exchange_agency_name"></div>
+        <div class="champ"><label for="exchange_agency_phone">Phone</label><input type="tel" id="exchange_agency_phone" inputmode="numeric" maxlength="14"></div>
+      </div>
+      <div class="duo">
+        <div class="champ"><label for="exchange_agency_address">Address</label><input type="text" id="exchange_agency_address"></div>
+        <div class="champ"><label for="exchange_agency_fax">Fax</label><input type="tel" id="exchange_agency_fax" inputmode="numeric" maxlength="14"></div>
+      </div>
+    </div>
+
+    <div class="carte">
+      <h3>What may be exchanged</h3>
+      <p class="aide">Tap only what you agree to share.</p>
+      <div class="chips" id="grilleEchange"></div>
+      <p class="aide" id="compteEchange" style="margin:9px 0 0"></p>
+      <div class="champ" style="margin-top:12px"><span class="etiq">Anything else you want them to be able to share?</span>
+        <div class="chips rep" data-rep="exch_other_text" data-liste="rien" data-autre="+ Add something"></div>
+        <input type="hidden" id="exch_other_text"></div>
+      <!-- Le dossier papier demande une fenetre, « from ___ to ___ ». Deux
+           dates a trouver de tete : le patient doit calculer, et beaucoup
+           laissent vide plutot que de compter. On lui demande la seule chose
+           qu'il sait vraiment, la duree ; les deux dates du papier se
+           calculent et partent telles quelles dans le document signe. -->
+      <div class="champ" style="margin-top:12px"><span class="etiq">For how long may they share it?</span>
+        <div class="chips" id="dureeEchange"></div>
+        <p class="aide" id="fenetreEchange" style="margin:9px 0 0"></p>
+        <input type="hidden" id="exchange_from">
+        <input type="hidden" id="exchange_to">
+      </div>
+    </div>
+
+    <div class="carte">
+      <h3>Supervision</h3>
+      <p class="aide" style="margin-bottom:12px">Your therapist may be supervised.</p>
+      <div class="champ"><span class="etiq">May the supervisor substitute for the therapist in exchanging information?</span>
+        <div class="chips ouinon" data-champ="exchange_supervisor_consent"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      </div>
+      <!-- « Votre relation avec la personne nommee sur ce formulaire » a ete
+           retiree le 2026-09-07. C'est mot pour mot la question « Signing as »
+           de la page de signature : qui signe cette autorisation. La poser
+           deux fois, c'est demander au patient de se souvenir de sa propre
+           reponse. Le document la reprend de la : documents.js retombe deja
+           sur `signer_relationship`, puis sur « Self ». -->
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ 6. REVIEW AND SIGN ══════════════════════════ -->
+<section id="et_signature" hidden>
+  <h2>Review and sign</h2>
+  <p class="chapeau">One signature covers every document in your packet.</p>
+
+  <div class="carte">
+    <h3>What you told us</h3>
+    <div class="recap" id="recap"></div>
+  </div>
+
+  <div class="carte">
+    <h3>The forms you are signing</h3>
+    <p class="aide" style="margin-bottom:10px">Scroll to the end of all seven.</p>
+    <div class="legal">
+      <!-- Le pave reste un seul bloc a derouler, avec une seule case a la
+           fin : un consentement unique qui couvre les sept documents. Ce qui
+           manquait n'etait pas le decoupage, c'etait de savoir OU on est.
+           Cette barre le dit, sans rien casser du bloc. -->
+      <div class="legal-ou" id="legalOu">Document 1 of 7 · PRP Consent for Treatment</div>
+      <div class="legal-def" id="legalDef"></div>
+      <div class="legal-pied">
+        <div class="legal-jauge"><i id="legalBarre"></i></div>
+        <div class="legal-etat" id="legalEtat">0% read</div>
+      </div>
+    </div>
+    <!-- Toutes les autorisations sont demandees ici, sur la seule etape ou
+         le patient lit et signe. Celle-ci vivait a l'etape du contact
+         d'urgence, loin de ce qu'elle autorise. -->
+    <!-- La case « je ne veux pas qu'on echange » a ete retiree le 2026-09-07 :
+         c'est desormais la porte d'entree de l'etape du partage. Repondre
+         « No, nobody » la-bas pose le refus dans le document. La garder ici,
+         c'etait poser deux fois la meme question a deux endroits, avec le
+         risque que les deux reponses se contredisent dans un document signe. -->
+    <!-- Ce que le patient a decide a l'etape du partage, rappele ici avant
+         qu'il signe. Ce n'est pas une question, c'est un rappel : la question
+         a deja ete posee, et la reposer laisserait deux reponses se
+         contredire dans un document signe. Le lien ramene la modifier. -->
+    <div class="rappel-partage" id="rappelPartage" hidden>
+      <span id="rappelPartageTexte"></span>
+      <button type="button" class="lien" id="rappelPartageLien">Change this</button>
+    </div>
+    <div class="case" data-case="ec_authorize_medical" style="margin-top:14px"><i class="bx"></i><span>I authorize the clinic to give medical information to my emergency contacts in case of emergency</span></div>
+    <div class="case bloque" id="caseLegale" data-case="legal_ok" style="margin-top:10px"><i class="bx"></i><span>I have read and understood all of the documents above, and I agree to them.</span></div>
+    <div class="msg-err" id="e_legal_ok"></div>
+  </div>
+
+  <div class="carte">
+    <h3>Your signature</h3>
+    <div class="duo">
+      <div class="champ"><label for="printed_name">Printed name <span class="oblig">*</span></label><input type="text" id="printed_name"><div class="msg-err" id="e_printed_name"></div></div>
+      <div class="champ"><span class="etiq">Signing as</span>
+        <input type="hidden" id="signer_relationship" data-liste="signataire" data-sans-autre data-defaut="Self">
+      </div>
+    </div>
+    <div class="champ"><span class="etiq">Sign with your finger <span class="oblig">*</span></span>
+      <div class="pad" id="padClient"><canvas id="cvClient"></canvas><div class="pad-l"></div><div class="pad-ph">Sign here</div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <span class="aide" style="margin:0">Signed <span id="dateSig"></span></span>
+        <button type="button" class="mini" id="btnEffacerClient">Clear</button>
+      </div>
+      <div class="msg-err" id="e_signature"></div>
+    </div>
+  </div>
+
+  <div class="carte" id="carteTuteur" hidden>
+    <h3>Parent or legal guardian</h3>
+    <div class="note" id="noteTuteur"></div>
+    <div class="duo">
+      <div class="champ"><label for="guardian_printed_name">Printed name</label><input type="text" id="guardian_printed_name"></div>
+      <div class="champ"><label for="guardian_relationship">Relationship</label><input type="text" id="guardian_relationship" placeholder="Mother, father, legal guardian…"></div>
+    </div>
+    <div class="champ"><span class="etiq">Guardian signature</span>
+      <div class="pad" id="padTuteur"><canvas id="cvTuteur"></canvas><div class="pad-l"></div><div class="pad-ph">Sign here</div></div>
+      <div style="text-align:right;margin-top:8px"><button type="button" class="mini" id="btnEffacerTuteur">Clear</button></div>
+      <div class="msg-err" id="e_guardian_signature"></div>
+    </div>
+  </div>
+
+  <!-- Le temoin est rare, et son bloc occupait 386 pixels au bas de la page
+       deja la plus longue du formulaire. Il s'ouvre a la demande. -->
+  <button type="button" class="mini" id="btnTemoin" style="width:100%;margin:0 0 12px;opacity:.75">Someone witnessed my signature</button>
+  <div class="carte" id="carteTemoin" hidden>
+    <h3>Witness</h3>
+    <div class="champ"><label for="witness_name">Witness name</label><input type="text" id="witness_name"></div>
+    <div class="champ"><span class="etiq">Witness signature</span>
+      <div class="pad" id="padTemoin" style="height:140px"><canvas id="cvTemoin"></canvas><div class="pad-l"></div><div class="pad-ph">Witness signs here</div></div>
+      <div style="text-align:right;margin-top:8px"><button type="button" class="mini" id="btnEffacerTemoin">Clear</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ 7. STAFF ══════════════════════════ -->
+<section id="et_staff" hidden>
+  <h2>Staff use only</h2>
+  <p class="chapeau">Staff only. Clients: submit now.</p>
+
+  <div class="note staff"><b>To be completed by the rehabilitation specialist.</b> Leave this section empty if it does not apply. The screening document is only produced if it is filled in. It must be completed within five working days of referral.</div>
+
+  <div class="carte">
+    <h3>Screening</h3>
+    <div class="duo">
+      <div class="champ"><label for="screening_date">Date of screening</label><input type="tel" id="screening_date" placeholder="MM/DD/YYYY" inputmode="numeric" maxlength="10"></div>
+      <div class="champ"><span class="etiq">Applicant</span>
+        <div class="chips" data-champ="screening_applicant_type"><button type="button" class="chip" data-v="Adult">Adult</button><button type="button" class="chip" data-v="Minor">Minor</button></div>
+      </div>
+    </div>
+    <div class="champ"><span class="etiq">Parties present, and their relationship to the client</span>
+      <div id="lignesParties"></div>
+      <button type="button" class="mini" id="btnAjouterPartie">Add a person</button>
+    </div>
+  </div>
+
+  <div class="carte">
+    <h3>Determination</h3>
+    <div class="champ"><span class="etiq">1. Have the applicant’s rehabilitation service needs been determined from the referral form, documentation of medical necessity and a mental health treatment plan?</span>
+      <div class="chips ouinon" data-champ="screen_q1" data-si-non="si_q1"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="si" id="si_q1"><div class="champ"><label for="screen_q1_explain">Explain</label><textarea id="screen_q1_explain"></textarea></div></div>
+    </div>
+    <div class="champ"><span class="etiq">2. Is the client willing and able to participate in PRP services?</span>
+      <div class="chips ouinon" data-champ="screen_q2" data-si-non="si_q2"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="si" id="si_q2"><div class="champ"><label for="screen_q2_explain">Explain</label><textarea id="screen_q2_explain"></textarea></div></div>
+    </div>
+    <div class="champ"><span class="etiq">3. Is the program able to address the client’s needs as identified?</span>
+      <div class="chips ouinon" data-champ="screen_q3" data-si-non="si_q3"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="si" id="si_q3">
+        <div class="champ"><label for="screen_q3_explain">Explain</label><textarea id="screen_q3_explain"></textarea></div>
+        <div class="champ"><label for="screen_q3_notified_date">Date the applicant was notified in writing</label><input type="tel" id="screen_q3_notified_date" placeholder="MM/DD/YYYY" inputmode="numeric" maxlength="10"></div>
+        <div class="champ"><span class="etiq">Was the applicant, and family as appropriate, given the reasons for the determination?</span>
+          <div class="chips ouinon" data-champ="screen_q3_reasons_provided"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+        </div>
+        <div class="champ"><span class="etiq">And recommendations for alternative services?</span>
+          <div class="chips ouinon" data-champ="screen_q3_alternatives_provided"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="champ"><span class="etiq">4. If accepted, was the applicant’s level of acceptance identified in writing?</span>
+      <div class="chips ouinon" data-champ="screen_q4" data-si-non="si_q4"><button type="button" class="chip" data-v="Yes">Yes</button><button type="button" class="chip" data-v="No">No</button></div>
+      <div class="si" id="si_q4"><div class="champ"><label for="screen_q4_explain">Explain</label><textarea id="screen_q4_explain"></textarea></div></div>
+    </div>
+    <div class="champ"><label for="screen_q5_enrollment">5. When is enrollment anticipated?</label><input type="tel" id="screen_q5_enrollment" placeholder="MM/DD/YYYY" inputmode="numeric" maxlength="10"></div>
+  </div>
+
+  <div class="carte">
+    <h3>Timeliness</h3>
+    <div class="case" data-case="screen_ontime"><i class="bx"></i><span>Screening is on time, as initially scheduled</span></div>
+    <div id="bloc_retard">
+      <p class="aide">Screening is delayed due to:</p>
+      <div class="case" data-case="screen_delay_approval"><i class="bx"></i><span>Delay in receiving approval</span></div>
+      <div class="case" data-case="screen_delay_gender"><i class="bx"></i><span>Lack of availability in consumer gender request</span></div>
+      <div class="case" data-case="screen_delay_schedule"><i class="bx"></i><span>Conflict in schedules</span></div>
+      <div class="champ"><label for="screen_delay_other_text">Other reason</label><input type="text" id="screen_delay_other_text"></div>
+    </div>
+  </div>
+
+  <div class="carte">
+    <h3>Staff name and title completing this screening</h3>
+    <div class="duo">
+      <div class="champ"><label for="staff_print_name">Print name</label><input type="text" id="staff_print_name"></div>
+      <div class="champ"><label for="staff_title">Title</label><input type="text" id="staff_title" placeholder="Certified Rehabilitation Specialist"></div>
+    </div>
+    <div class="champ"><span class="etiq">Sign name</span>
+      <div class="pad" id="padStaff" style="height:140px"><canvas id="cvStaff"></canvas><div class="pad-l"></div><div class="pad-ph">Staff signs here</div></div>
+      <div style="text-align:right;margin-top:8px"><button type="button" class="mini" id="btnEffacerStaff">Clear</button></div>
+    </div>
+    <div class="champ" style="margin-top:14px"><label for="prp_name">PRP representative name — for the PRP consent</label><input type="text" id="prp_name"></div>
+    <div class="champ"><span class="etiq">PRP representative signature</span>
+      <div class="pad" id="padPrp" style="height:140px"><canvas id="cvPrp"></canvas><div class="pad-l"></div><div class="pad-ph">PRP representative signs here</div></div>
+      <div style="text-align:right;margin-top:8px"><button type="button" class="mini" id="btnEffacerPrp">Clear</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ ATTENTE ══════════════════════════ -->
+<section id="attente" hidden>
+  <div class="plein">
+    <div class="anneau">
+      <svg width="132" height="132" viewBox="0 0 132 132"><circle class="fond" cx="66" cy="66" r="54" fill="none" stroke-width="8"/><circle class="arc" id="arcAttente" cx="66" cy="66" r="54" fill="none" stroke-width="8"/></svg>
+      <b id="compteur">45</b>
+    </div>
+    <h2 id="attenteTitre">Filing your packet</h2>
+    <p id="attenteTexte">Your documents are already made on this phone. We are filing them with the clinic now. Please keep this page open.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════ FIN ══════════════════════════ -->
+<section id="fini" hidden>
+  <div class="plein">
+    <div class="coche"><svg width="36" height="36" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+    <h2 id="finiTitre">Your packet is filed</h2>
+    <p id="finiTexte">Ability and Empowerment Services has your admission packet. Download your own copy below and keep it.</p>
+    <button class="btn btn-p" type="button" id="btnTelecharger" style="max-width:330px;margin:0 auto 12px;width:100%">Download my copy</button>
+    <div id="autresDocs" style="margin-top:6px"></div>
+    <p style="font-size:12.5px;margin-top:22px">Reference <b id="refFinale"></b></p>
+    <button class="mini" type="button" id="btnRendre" hidden style="margin-top:16px">I am done — clear this tablet</button>
+    <!-- Le screening PRP appartient au personnel. Le patient ne le traverse
+         plus : il s'ouvre ici, une fois le dossier depose. -->
+    <div style="margin-top:18px">
+      <button class="mini" type="button" id="btnStaff" style="opacity:.6;font-size:12px">Staff: complete the PRP screening</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Poser le formulaire sur l'ecran d'accueil : il s'ouvre alors en plein
+     ecran, sans barre d'adresse, et il fonctionne hors ligne. Chrome previent
+     quand c'est possible ; iOS ne previent jamais, il faut lui dire ou est le
+     bouton. Placee ici, dans le flux, juste au-dessus de la barre d'action :
+     plus rien n'est en position:fixed dans cette page. -->
+<div class="installe" id="banniereInstall" hidden>
+  <div class="installe-t" id="installTexte"></div>
+  <div class="installe-b">
+    <button type="button" class="mini plein" id="btnInstaller">Install</button>
+    <button type="button" class="mini" id="btnPasInstaller">Not now</button>
+  </div>
+</div>
+
+<div class="barre" id="barre" hidden>
+  <div class="barre-in">
+    <button class="btn btn-s" type="button" id="btnPrec">Back</button>
+    <button class="btn btn-p" type="button" id="btnSuiv">Continue</button>
+  </div>
+</div>
+
+<div class="sauve" id="toastSauve">Saved</div>
+
+<div class="modale" id="modaleAutre">
+  <div class="boite-autre">
+    <p class="boite-t" id="autreTitre"></p>
+    <input type="text" id="autreTexte" placeholder="Type it here">
+    <div class="boite-b">
+      <button type="button" class="btn btn-p" id="autreOk">Add</button>
+      <button type="button" class="mini" id="autreAnnuler">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="bilan" id="bilan" hidden>
+  <div class="bilan-t" id="bilanTitre"></div>
+  <ul class="bilan-l" id="bilanListe"></ul>
+</div>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="documents.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Reglages
+   ══════════════════════════════════════════════════════════════════════════ */
+var CONFIG = {
+  WEBHOOK: 'https://n8n.srv1325858.hstgr.cloud/webhook/ability-intake',
+  VERSION: '1.0',
+  /* Le rebours affiche et le delai d'abandon sont deux choses differentes.
+     Abandonner une requete qui reussit ensuite cote serveur fait classer le
+     dossier deux fois quand la file le renvoie : un patient enregistre deux
+     fois est pire qu'un patient enregistre lentement.
+
+     75 s, et non 45. Cinq envois reels le 2026-09-04 ont donne 30,0 / 33,0 /
+     34,7 / 35,5 et 42,6 secondes — avec des images de test minuscules, la ou
+     un patient envoie deux a trois megaoctets de photos. Un rebours qui
+     atteint zero a chaque fois n'est plus un rebours, c'est une promesse
+     rompue. L'abandon suit a 180 s, largement au-dela du pire cas. */
+  REBOURS: 75,
+  ABANDON: 180000,
+  MIN_ATTENTE: 1200,
+  RETENTE: 60000,
+  MAX_PHOTO_MO: 8,
+  COTE_PHOTO: 1200,
+  CLE: 'aes_intake_v1',
+  CLE_FILE: 'aes_intake_file',
+
+  /* ── Tablette d'accueil, partagee par tous les patients ──────────────────
+     Ce formulaire vit sur une tablette posee a l'accueil du cabinet. Ce
+     n'est pas le telephone d'une personne : le patient suivant recoit
+     l'appareil du precedent. Tout ce qui « se souvient » devient alors une
+     fuite, et deux mecanismes se souviennent sans qu'on le leur demande.
+
+     Le premier est le remplissage automatique du navigateur, qui propose le
+     nom et l'adresse du patient precedent des que le champ est touche.
+     Le second, plus grave, est notre propre reprise : elle rouvrait le
+     dossier entier du precedent, SSN compris, a qui prend la tablette.
+
+     En mode kiosque, donc : pas de reprise, effacement des la sortie, et
+     effacement apres un temps d'inactivite, parce qu'un patient qui
+     abandonne au milieu laisse ses reponses a l'ecran.
+
+     ?perso=1 rend le comportement d'origine, pour le jour ou le cabinet
+     enverra un lien au patient sur son propre telephone. */
+  KIOSQUE: (location.search.indexOf('perso=1') === -1),
+  INACTIVITE: 300000,
+  PREAVIS: 30000
+};
+
+/* Le temps restant affiche en tete, etape par etape. Ces chiffres ne sont pas
+   une impression : `python3 outils/temps.py` les calcule sur l'inventaire reel
+   des champs et les imprime tout faits, a recopier ici. Relancer le modele
+   apres toute modification.
+
+   Mesure du 2026-09-06 : 19,9 minutes sur le dossier papier, 13,6 ici.
+   Plus aucune zone de texte dans le parcours du patient : onze questions
+   ouvertes sont devenues des rangees de puces.
+
+   Une seule valeur s'ecarte du modele, l'etape 6. Le modele compte 1,1 minute
+   parce qu'il suppose un patient qui deroule les 2 218 mots juridiques sans
+   les lire. Certains les lisent. On affiche 2,5, quitte a finir en avance :
+   annoncer moins que la realite est la seule erreur qui se paie en confiance.
+
+   Et tout ceci reste un modele. Le chronometre sur un vrai patient reste a
+   faire, et c'est lui qui aura raison. */
+/* Les durees vivent desormais dans ETAPES, une par etape, calculees par
+   `python3 outils/temps.py`. Il n'y a plus de tableau parallele a tenir
+   a jour a cote de la liste des etapes. */
+
+var $ = function(id){ return document.getElementById(id); };
+var $$ = function(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+var donnees = {};
+var demarre = false;
+var photos = {};
+var docsProduits = null;
+var refDossier = '';
+var minuteurSauve = null;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Champs et listes
+   ══════════════════════════════════════════════════════════════════════════ */
+var PHOTOS = [
+  { cle:'image_id_front', titre:'Photo ID — front', aide:'Driver’s licence, State ID or passport', cam:'environment' },
+  { cle:'image_id_back', titre:'Photo ID — back', aide:'The side with the barcode', cam:'environment' },
+  { cle:'image_insurance_front', titre:'Insurance card — front', aide:'Make sure the member ID is readable', cam:'environment' },
+  { cle:'image_insurance_back', titre:'Insurance card — back', aide:'The side with the claims address', cam:'environment' },
+  { cle:'image_face', titre:'Your photograph', aide:'A clear picture of your face, so staff recognise you', cam:'user' }
+];
+
+var FAMILLE = [
+  ['fam_alcohol','Alcohol or substance abuse'],
+  ['fam_anxiety','Anxiety'],
+  ['fam_depression','Depression'],
+  ['fam_domestic_violence','Domestic violence'],
+  ['fam_eating_disorders','Eating disorders'],
+  ['fam_obesity','Obesity'],
+  ['fam_ocd','Obsessive compulsive behaviour'],
+  ['fam_schizophrenia','Schizophrenia'],
+  ['fam_suicide_attempts','Suicide attempts']
+];
+
+/* Deux libelles par ligne : celui qu'on montre, et celui du cabinet.
+   Onze phrases empilees en cases a cocher faisaient une liste a derouler que
+   personne ne lit jusqu'au bout ; deux mots tiennent dans une puce et se
+   balaient d'un coup d'oeil. Le document imprime, lui, garde la phrase
+   entiere du dossier papier, mot pour mot :
+
+     'Coordination of services agreement/treatment planning'
+
+   reste dans le PDF signe, meme si l'ecran dit « Care coordination ». */
+var ECHANGE = [
+  ['exch_notification',     'Start / end',      'Notification of beginning and/or ending of treatment'],
+  ['exch_periodic_summary', 'Progress summary', 'Periodic summary of treatment progress'],
+  ['exch_past_treatment',   'Past treatment',   'Past treatment'],
+  ['exch_intake_summary',   'Intake summary',   'Intake assessment summary'],
+  ['exch_psych_eval',       'Psych evaluation', 'Psychological evaluation'],
+  ['exch_financial',        'Financial info',   'Financial information'],
+  ['exch_discharge_summary','Discharge summary','Discharge summary'],
+  ['exch_current_diagnosis','Diagnosis',        'Current psychiatric diagnosis'],
+  ['exch_medications',      'Medications',      'Current psychotropic medication and dosages'],
+  ['exch_verbal',           'Verbal exchange',  'Verbal exchange of information'],
+  ['exch_coordination',     'Care coordination','Coordination of services agreement/treatment planning']
+];
+
+/* Champs obligatoires, par etape. L'etape du personnel n'en a aucun : il la
+   remplit ou non, et le document ne sort que s'il l'a remplie. */
+var REQUIS = {
+  et_identite: [['first_name','First name'],['last_name','Last name'],
+      ['date_of_birth','Date of birth'],['gender','Gender','chip']],
+  et_contact: [['cell_phone','Cell phone'],['address_street','Street'],
+      ['address_city','City'],['address_state','State'],['address_zip','ZIP code']],
+  et_couverture: [['insurance_primary','Insurance']],
+  et_urgence: [['ec1_name','Emergency contact name'],
+      ['ec1_relationship','Relationship','chip'],['ec1_phone_am','Emergency contact phone']],
+  et_medecin: [['pcp_statut','Primary care physician','chip'],
+      ['medical_any','Allergies and conditions','chip']],
+  et_corps: [['physical_health_rating','Physical health','chip'],
+      ['sleep_rating','Sleeping habits','chip']],
+  et_esprit: [['prior_mh_services','Previous mental health services','chip'],
+      ['current_meds','Current prescription medication','chip'],
+      ['depression','Sadness, grief or depression','chip'],
+      ['anxiety','Anxiety','chip'],['drug_use_frequency','Recreational drug use','chip']],
+  et_entourage: [],
+  et_vous: [['strengths','Your strengths'],['therapy_goals','Your goals']],
+  et_famille: [],
+  et_partage: [['exchange_any','Sharing your file','chip']],
+  et_signature: [['printed_name','Printed name']],
+  et_staff: []
+};
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Sauvegarde et reprise
+   ──────────────────────────────────────────────────────────────────────────
+   localStorage, pas sessionStorage : un dossier de cette taille se remplit en
+   plusieurs fois, souvent sur plusieurs jours. Et on rouvre a l'etape ou le
+   patient s'est arrete, ce qui suppose de relire la meme cle que celle qu'on
+   ecrit — c'est exactement ce qui manquait ailleurs.
+   ══════════════════════════════════════════════════════════════════════════ */
+function sauver(){
+  try{
+    var p = {};
+    for (var k in donnees) if (donnees.hasOwnProperty(k)) p[k] = donnees[k];
+    localStorage.setItem(CONFIG.CLE, JSON.stringify({
+      donnees: p, etape: etapeId, quand: Date.now(), version: CONFIG.VERSION
+    }));
+    /* Les photos sont hors du quota de localStorage : cinq cliches de
+       telephone le saturent, et l'echec est silencieux. On les garde en
+       memoire vive, et on previent le patient s'il quitte la page. */
+  }catch(e){}
+}
+function sauverPlusTard(){
+  clearTimeout(minuteurSauve);
+  minuteurSauve = setTimeout(function(){ sauver(); toast(); }, 2200);
+}
+function toast(){
+  var t = $('toastSauve'); t.classList.add('on');
+  setTimeout(function(){ t.classList.remove('on'); }, 1400);
+}
+function lireSauvegarde(){
+  try{
+    var b = localStorage.getItem(CONFIG.CLE);
+    if (!b) return null;
+    var o = JSON.parse(b);
+    return (o && o.donnees && o.version === CONFIG.VERSION) ? o : null;
+  }catch(e){ return null; }
+}
+function effacerSauvegarde(){ try{ localStorage.removeItem(CONFIG.CLE); }catch(e){} }
+
+function appliquer(o){
+  donnees = o.donnees || {};
+  for (var k in donnees){
+    if (!donnees.hasOwnProperty(k)) continue;
+    var el = $(k);
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')){
+      el.value = donnees[k];
+    }
+  }
+  $$('.chips[data-champ], .seg[data-champ]').forEach(function(g){
+    var v = donnees[g.dataset.champ];
+    $$('button', g).forEach(function(b){ b.classList.toggle('on', !!v && b.dataset.v === v); });
+  });
+  $$('[data-case]').forEach(function(c){
+    c.classList.toggle('on', donnees[c.dataset.case] === 'Yes');
+  });
+  /* Rendre aussi l'etat des raccourcis, sinon le patient retrouve son texte
+     sans voir quelles suggestions il avait retenues. */
+  $$('.chips.suggest[data-suggest]').forEach(function(g){
+    var cible = $(g.dataset.suggest);
+    var liste = (cible && cible.value) ? cible.value.split(/,\s*/) : [];
+    $$('button', g).forEach(function(b){ b.classList.toggle('on', liste.indexOf(b.dataset.v) !== -1); });
+  });
+  $$('textarea[data-aucun]').forEach(function(t){
+    var b = t.parentNode.querySelector('.rangee-aucun .chip');
+    var pose = (t.value || '') === t.dataset.aucun;
+    if (b) b.classList.toggle('on', pose);
+    t.disabled = pose;
+  });
+  var ga = $('c_assureur');
+  if (ga) $$('button', ga).forEach(function(b){
+    b.classList.toggle('on', !!b.dataset.v && b.dataset.v === (donnees.insurance_primary || ''));
+  });
+
+  peindreFamille(); peindreEchange(); peindreDureeEchange(); peindreParties();
+  majAge(); appliquerConditionnels(); majRelation();
+  /* L'etape est relue depuis la meme cle qu'on ecrit : le patient repart la
+     ou il s'est arrete, pas au debut. */
+  /* On relit la meme cle qu'on ecrit : le patient repart la ou il s'est
+     arrete, et si l'etape a disparu du parcours, il repart du debut. */
+  etapeId = ETAPES.some(function(e){ return e.id === o.etape; }) ? o.etape : 'et_identite';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Navigation
+   ══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Le parcours
+   ───────────────────────────────────────────────────────────────────────────
+   Douze etapes courtes plutot que six longues. L'etape 1 faisait a elle seule
+   3 207 pixels, un quart du parcours, annonce comme un septieme.
+
+   Et surtout : **une etape sait a qui elle s'adresse**. `pertinente` decide si
+   elle fait partie du parcours DE CE PATIENT. Une etape ecartee n'est ni
+   affichee, ni comptee dans la barre, ni comptee dans le temps restant. C'est
+   ce qui rend la progression honnete : « Step 4 of 12 » veut dire douze.
+
+   Le decoupage a un prix, et il est paye : chaque changement d'etape coute au
+   patient une dizaine de secondes pour lire le titre et se reperer. Six coupes
+   de plus, c'est une minute. Le total passe de 13,9 a 15,2 minutes modelisees.
+   On l'accepte parce qu'une etape de 3 207 pixels annoncee comme un septieme
+   du parcours coute plus cher que ca en decouragement.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   La duree affichee : cinq minutes, decidee, pas mesuree
+   ───────────────────────────────────────────────────────────────────────────
+   `outils/temps.py` mesure **13,6 minutes** d'interaction reelle. Le chiffre
+   ci-dessous en affiche **5**. L'ecart est voulu : Yanis l'a demande le
+   2026-09-07, deux fois, pour la valeur percue a l'ouverture du formulaire.
+
+   Ce n'est donc pas une erreur a corriger, et ce n'est pas une mesure. Si
+   quelqu'un relance `temps.py` et trouve 13,6, les deux chiffres sont justes,
+   ils ne repondent pas a la meme question.
+
+   Les douze valeurs restent proportionnelles a la mesure. C'est ce qui compte
+   pour le patient : le compteur descend regulierement de 5 a 0 sur les douze
+   etapes, au lieu de tomber a zero au tiers du parcours et de rester bloque
+   sur « Almost done » pendant huit ecrans. Un chiffre optimiste passe ; un
+   compteur qui se contredit sous les yeux du patient, non. */
+
+var ETAPES = [
+  { id:'et_identite',   titre:'You',                        min:0.26 },
+  { id:'et_contact',    titre:'How we reach you',           min:0.51 },
+  { id:'et_couverture', titre:'Insurance and photos',       min:0.88 },
+  { id:'et_urgence',    titre:'Your emergency contact',     min:0.26 },
+  { id:'et_medecin',    titre:'Your doctor',                min:0.48 },
+  { id:'et_corps',      titre:'Your health',                min:0.15 },
+  { id:'et_esprit',     titre:'How you have been feeling',  min:0.29 },
+  { id:'et_entourage',  titre:'Relationships and family',   min:0.33 },
+  { id:'et_vous',       titre:'About you',                  min:0.4 },
+  { id:'et_famille',    titre:'Where you come from',        min:0.18 },
+  { id:'et_partage',    titre:'Sharing your information',   min:0.33 },
+  { id:'et_signature',  titre:'Review and sign',            min:0.93 },
+  /* Le patient n'a rien a faire dans le screening du personnel. Il y accede
+     par ?staff=1, ou par le bouton discret de l'ecran de fin, une fois le
+     dossier depose. Douze etapes affichees au patient, pas treize. */
+  { id:'et_staff',      titre:'Staff use only',             min:0,
+    pertinente: function(){ return modeStaff; } }
+];
+
+var modeStaff = (location.search.indexOf('staff=1') !== -1);
+var etapeId = 'et_identite';
+
+function parcours(){
+  return ETAPES.filter(function(e){ return !e.pertinente || e.pertinente(); });
+}
+function rangEtape(id){
+  var p = parcours();
+  for (var i = 0; i < p.length; i++) if (p[i].id === id) return i;
+  return 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Navigation
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Le contenu defile dans <main>, plus dans la fenetre : c'est lui qu'on
+   remonte, et c'est lui qu'on ecoute. */
+function hautDePage(doux){
+  var m = document.querySelector('main');
+  if (!m) return;
+  if (doux && m.scrollTo) m.scrollTo({ top: 0, behavior: 'smooth' });
+  else m.scrollTop = 0;
+}
+
+function aller(id){
+  var p = parcours();
+  if (typeof id === 'number') id = (p[id - 1] || p[0]).id;
+  if (!p.some(function(e){ return e.id === id; })) id = p[0].id;
+  etapeId = id;
+  ETAPES.forEach(function(e){ var el = $(e.id); if (el) el.hidden = (e.id !== id); });
+  $('accueil').hidden = true; $('attente').hidden = true; $('fini').hidden = true;
+  $('mast').hidden = false; $('barre').hidden = false;
+  majEntete();
+  if (id === 'et_signature'){
+    prereplirSignature(); peindreRecap(); dimensionnerPads(); majTuteur(); suivreLecture();
+  }
+  if (id === 'et_staff') dimensionnerPads();
+  var rang = rangEtape(id);
+  $('btnPrec').style.display = (rang === 0) ? 'none' : '';
+  $('btnSuiv').textContent = (rang === p.length - 1) ? 'Submit my packet' : 'Continue';
+  $('bilan').hidden = true;
+  hautDePage();
+  sauver();
+}
+
+function etapeSuivante(){
+  var p = parcours(), r = rangEtape(etapeId);
+  if (r >= p.length - 1) envoyer(); else aller(p[r + 1].id);
+}
+function etapePrecedente(){
+  var p = parcours(), r = rangEtape(etapeId);
+  if (r > 0) aller(p[r - 1].id);
+}
+
+function majEntete(){
+  var p = parcours(), r = rangEtape(etapeId), e = p[r];
+  $('mastEtape').textContent = 'Step ' + (r + 1) + ' of ' + p.length;
+  $('mastTitre').textContent = e.titre;
+  $('jaugeBarre').style.width = ((r + 1) / p.length * 100) + '%';
+  /* Le temps restant ne compte que les etapes qui restent VRAIMENT a faire. */
+  var reste = 0;
+  for (var i = r; i < p.length; i++) reste += p[i].min;
+  /* A cinq minutes affichees, arrondir a l'entier le plus proche donnerait
+     « Almost done » des la quatrieme etape, pour huit ecrans encore. On
+     arrondit au-dessus, et on ne dit « presque fini » qu'a la derniere. */
+  $('mastReste').textContent = (r === p.length - 1) ? 'Almost done'
+    : '~' + Math.max(1, Math.ceil(reste)) + ' min left';
+  peindrePastilles(p, r);
+}
+
+/* Une barre pleine ne dit pas combien d'etapes il reste. Douze pastilles, si. */
+function peindrePastilles(p, r){
+  var z = $('pastilles'); if (!z) return;
+  if (z.childElementCount !== p.length){
+    z.innerHTML = '';
+    p.forEach(function(){ z.appendChild(document.createElement('i')); });
+  }
+  Array.prototype.forEach.call(z.children, function(el, i){
+    el.className = i < r ? 'faite' : (i === r ? 'encours' : '');
+  });
+}
+
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Saisie : chips, segments, cases, conditionnels
+   ══════════════════════════════════════════════════════════════════════════ */
+function brancherChoix(){
+  $$('.chips[data-champ], .seg[data-champ]').forEach(function(g){
+    g.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if (!b) return;
+      var v = b.dataset.v, champ = g.dataset.champ;
+      var actif = b.classList.contains('on');
+      $$('button', g).forEach(function(x){ x.classList.remove('on'); });
+      if (!actif){ b.classList.add('on'); donnees[champ] = v; ressaut(b); }
+      else delete donnees[champ];
+      g.classList.remove('err');
+      if (g.dataset.autre) montrer($('si_' + g.dataset.autre), donnees[champ] === 'Other');
+      if (g.dataset.si) montrer($(g.dataset.si), donnees[champ] === 'Yes');
+      if (g.dataset.siNon) montrer($(g.dataset.siNon), donnees[champ] === 'No');
+      if (champ === 'employed'){
+        montrer($('si_emploi'), v === 'Yes' && !actif);
+        montrer($('si_sans_emploi'), v === 'No' && !actif);
+      }
+      if (champ === 'depression' || champ === 'anxiety') majCrise();
+      /* Les cases appelaient les conditionnels, les chips non : un choix de
+         chip qui devait replier un bloc ne repliait rien. */
+      appliquerConditionnels();
+      sauverPlusTard();
+    });
+  });
+  $$('[data-case]').forEach(function(c){
+    c.addEventListener('click', function(){
+      if (c.classList.contains('bloque')) return;
+      var on = !c.classList.contains('on');
+      c.classList.toggle('on', on);
+      donnees[c.dataset.case] = on ? 'Yes' : 'No';
+      appliquerConditionnels();
+      sauverPlusTard();
+    });
+  });
+}
+function montrer(el, oui){ if (el) el.classList.toggle('on', !!oui); }
+
+function appliquerConditionnels(){
+  /* Les deux cases « je n'ai pas de SSN » et « je n'ai pas d'assurance » ont
+     ete retirees le 2026-09-06. Une case pour declarer une absence est une
+     question de plus pour dire ce qu'un champ vide dit deja. Le SSN est
+     devenu facultatif ; l'absence d'assurance est une reponse dans la liste
+     des assureurs, « Self-pay (no insurance) ». */
+
+  /* Le medecin traitant : une question, trois reponses. Les deux cles du
+     document papier se deduisent du choix, elles ne sont plus saisies. */
+  donnees.pcp_none = (donnees.pcp_statut === 'none') ? 'Yes' : 'No';
+  donnees.pcp_cannot_afford = (donnees.pcp_statut === 'afford') ? 'Yes' : 'No';
+  $('bloc_pcp').style.display = (donnees.pcp_statut && donnees.pcp_statut !== 'has') ? 'none' : '';
+  $('bloc_retard').style.display = (donnees.screen_ontime === 'Yes') ? 'none' : '';
+  montrer($('si_prior'), donnees.prior_mh_services === 'Yes');
+  montrer($('si_meds'), donnees.current_meds === 'Yes');
+  montrer($('si_psych'), donnees.psych_meds_ever === 'Yes');
+  montrer($('si_depression'), donnees.depression === 'Yes');
+  montrer($('si_anxiety'), donnees.anxiety === 'Yes');
+  montrer($('si_pain'), donnees.chronic_pain === 'Yes');
+  montrer($('si_rel'), donnees.relationship === 'Yes');
+  montrer($('si_foi'), donnees.spiritual === 'Yes');
+  montrer($('si_emploi'), donnees.employed === 'Yes');
+  montrer($('si_sans_emploi'), donnees.employed === 'No');
+  /* La porte d'entree du partage. « No » ferme les cartes qui suivent, et
+     vaut le refus que le dossier papier prevoit. */
+  var partage = donnees.exchange_any;
+  $('bloc_echange').style.display = (partage === 'Yes') ? '' : 'none';
+  donnees.exchange_declined = (partage === 'No') ? 'Yes' : 'No';
+
+  ['q1','q2','q3','q4'].forEach(function(q){
+    montrer($('si_' + q), donnees['screen_' + q] === 'No');
+  });
+
+  /* ── Ce qu'on cesse de demander quand la reponse precedente le rend inutile
+     ────────────────────────────────────────────────────────────────────────
+     Demander « quel sport ? » a quelqu'un qui ne fait jamais de sport, ou
+     l'age d'un parent qu'il vient de declarer decede, ce n'est pas seulement
+     du temps perdu : c'est une question qui prouve qu'on n'a pas lu la
+     precedente. */
+
+  /* Zero seance par semaine : la question du type de sport n'a plus d'objet. */
+  var freq = ($('exercise_frequency').value || '').replace(/\D/g,'');
+  montrer($('si_sport'), freq !== '' && parseInt(freq, 10) > 0);
+
+  /* L'age d'un parent qu'on vient de declarer decede. */
+  montrer($('si_mother_age'), donnees.mother_alive !== 'No');
+  montrer($('si_father_age'), donnees.father_alive !== 'No');
+
+  /* Pas d'allergie ni de pathologie : deux champs de liste disparaissent. */
+  var rienMedical = donnees.medical_any === 'No';
+  montrer($('si_medical'), donnees.medical_any === 'Yes');
+  if (rienMedical){
+    ['allergies','medical_conditions'].forEach(function(id){
+      if (($(id).value || '').trim() === ''){ $(id).value = 'None'; donnees[id] = 'None'; }
+    });
+  }
+
+  /* Un mineur ne se voit pas demander s'il est marie, s'il travaille, ni s'il
+     vit une relation amoureuse. Ce ne sont pas des questions plus rapides a
+     poser : ce sont des questions qui n'ont pas lieu d'etre, et les poser
+     quand meme apprend au patient que le formulaire ne l'ecoute pas. */
+  var mineur = estMineur();
+  ['bloc_marital','bloc_emploi','bloc_romance'].forEach(function(id){
+    var el = $(id);
+    if (el) el.style.display = mineur ? 'none' : '';
+  });
+
+  /* Le numero d'urgence de l'etape 1 EST celui du contact d'urgence. */
+  var tel = ($('ec1_phone_am').value || '').trim();
+  $('emergency_phone').value = tel;
+  donnees.emergency_phone = tel;
+
+  majCrise();
+}
+
+/* Le nom imprime sous la signature est le nom du patient, et celui du tuteur
+   a deja ete saisi a l'etape 1. On les pose, le patient peut les corriger. */
+function prereplirSignature(){
+  var pn = $('printed_name');
+  if (!(pn.value || '').trim()){
+    var n = ((donnees.first_name || '') + ' ' + (donnees.last_name || '')).trim();
+    if (n){ pn.value = n; donnees.printed_name = n; }
+  }
+  var gp = $('guardian_printed_name');
+  if (gp && !(gp.value || '').trim() && (donnees.guardian_name || '').trim()){
+    gp.value = donnees.guardian_name; donnees.guardian_printed_name = gp.value;
+  }
+}
+function majCrise(){
+  $('blocCrise').hidden = !(donnees.depression === 'Yes' && donnees.anxiety === 'Yes');
+}
+
+/* ── Grille des antecedents familiaux ───────────────────────────────────────
+   Neuf pathologies, chacune avec un « oui / non » et un « quel parent » :
+   dix-huit interactions sur le papier. Ici on ne tape que ce qui s'applique,
+   et le champ « qui » n'apparait que pour celles-la. */
+function peindreFamille(){
+  var g = $('grilleFamille'); g.innerHTML = '';
+  FAMILLE.forEach(function(f){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = f[1];
+    b.classList.toggle('on', donnees[f[0]] === 'Yes');
+    b.addEventListener('click', function(){
+      var on = donnees[f[0]] !== 'Yes';
+      donnees[f[0]] = on ? 'Yes' : 'No';
+      b.classList.toggle('on', on);
+      peindrePrecisionsFamille(); sauverPlusTard();
+    });
+    g.appendChild(b);
+  });
+  peindrePrecisionsFamille();
+}
+/* Neuf pathologies cochees pouvaient ouvrir neuf champs de texte, chacun a
+   remplir a la main. Ce sont des puces : la reponse tient dans une dizaine de
+   liens de parente, et « Other » couvre le reste. */
+var PARENTS = ['Mother','Father','Sister','Brother','Grandmother','Grandfather',
+               'Aunt','Uncle','Cousin','Child','More than one'];
+
+function peindrePrecisionsFamille(){
+  var z = $('famillePrecisions'); z.innerHTML = '';
+  FAMILLE.filter(function(f){ return donnees[f[0]] === 'Yes'; }).forEach(function(f){
+    var cle = f[0] + '_who';
+    var d = document.createElement('div'); d.className = 'champ';
+    var l = document.createElement('span'); l.className = 'etiq';
+    l.textContent = f[1] + ' \u2014 who?';
+    var g = document.createElement('div');
+    g.className = 'chips rep';
+    g.dataset.rep = cle;
+    g.dataset.liste = 'parents';
+    g.setAttribute('data-multi', '');
+    var cache = document.createElement('input');
+    cache.type = 'hidden'; cache.id = cle;
+    cache.value = donnees[cle] || '';
+    d.appendChild(l); d.appendChild(g); d.appendChild(cache);
+    z.appendChild(d);
+    poserUnChampChips(g);
+  });
+}
+
+
+/* Rien n'est coche d'avance. Une autorisation de divulguer des informations
+   medicales se donne, elle ne se retire pas : cocher onze cases a la place du
+   patient puis lui demander de decocher, c'est obtenir un accord qu'il n'a
+   jamais donne. Il touche ce qu'il accepte de partager, et rien d'autre. */
+/* Cinq durees, et la fenetre du papier se remplit toute seule. Un an est
+   pris d'avance : c'est le terme que le formulaire du cabinet fixe lui-meme
+   au paragraphe suivant, donc le patient qui ne touche a rien obtient
+   exactement ce que le papier prevoit. */
+var DUREES_ECHANGE = [
+  ['3 months', 3], ['6 months', 6], ['1 year', 12], ['2 years', 24], ['3 years', 36]
+];
+
+function peindreDureeEchange(){
+  var g = $('dureeEchange'); if (!g) return;
+  g.innerHTML = '';
+  if (!donnees.exchange_mois) donnees.exchange_mois = '12';
+  DUREES_ECHANGE.forEach(function(d){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (String(donnees.exchange_mois) === String(d[1]) ? ' on' : '');
+    b.textContent = d[0];
+    b.addEventListener('click', function(){
+      donnees.exchange_mois = String(d[1]);
+      peindreDureeEchange();
+      sauverPlusTard();
+    });
+    g.appendChild(b);
+  });
+  poserFenetreEchange();
+}
+
+/* Les deux dates du dossier papier, calculees depuis aujourd'hui. */
+function poserFenetreEchange(){
+  var mois = parseInt(donnees.exchange_mois, 10) || 12;
+  var d = new Date();
+  var debut = new Date(d.getTime());
+  var fin = new Date(d.getFullYear(), d.getMonth() + mois, d.getDate());
+  var fmt = function(x){
+    return ('0' + (x.getMonth() + 1)).slice(-2) + '/' + ('0' + x.getDate()).slice(-2)
+         + '/' + x.getFullYear();
+  };
+  $('exchange_from').value = fmt(debut);
+  $('exchange_to').value = fmt(fin);
+  donnees.exchange_from = $('exchange_from').value;
+  donnees.exchange_to = $('exchange_to').value;
+  var z = $('fenetreEchange');
+  if (z) z.textContent = 'From ' + fmt(debut) + ' to ' + fmt(fin) + '.';
+}
+
+function peindreEchange(){
+  var g = $('grilleEchange'); g.innerHTML = '';
+  ECHANGE.forEach(function(e){
+    if (donnees[e[0]] === undefined) donnees[e[0]] = 'No';
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (donnees[e[0]] === 'Yes' ? ' on' : '');
+    b.textContent = e[1];
+    b.title = e[2];
+    b.addEventListener('click', function(){
+      var on = donnees[e[0]] !== 'Yes';
+      donnees[e[0]] = on ? 'Yes' : 'No';
+      b.classList.toggle('on', on);
+      majCompteEchange();
+      sauverPlusTard();
+    });
+    g.appendChild(b);
+  });
+  majCompteEchange();
+}
+
+/* Onze puces bleues se ressemblent : on dit combien sont retirees, sinon le
+   patient ne voit pas ce qu'il vient de faire. */
+function majCompteEchange(){
+  var z = $('compteEchange'); if (!z) return;
+  var pris = ECHANGE.filter(function(e){ return donnees[e[0]] === 'Yes'; }).length;
+  z.textContent = pris === 0 ? 'Nothing selected yet.'
+    : pris === 1 ? 'One item may be shared.'
+    : pris + ' items may be shared.';
+}
+
+
+/* ── Parties presentes au screening, lignes dynamiques ─────────────────── */
+function peindreParties(){
+  var z = $('lignesParties'); z.innerHTML = '';
+  var liste = donnees.screening_parties_json ? JSON.parse(donnees.screening_parties_json) : [];
+  if (!liste.length) liste = [{ name:'', relationship:'' }];
+  liste.forEach(function(p, i){
+    var l = document.createElement('div'); l.className = 'ligne-dyn';
+    var a = document.createElement('input'); a.type='text'; a.placeholder='Name'; a.value=p.name||'';
+    var b = document.createElement('input'); b.type='text'; b.placeholder='Relationship'; b.value=p.relationship||'';
+    var s = document.createElement('button'); s.type='button'; s.className='sup'; s.textContent='×';
+    function garder(){
+      liste[i] = { name:a.value, relationship:b.value };
+      donnees.screening_parties_json = JSON.stringify(liste); sauverPlusTard();
+    }
+    a.addEventListener('input', garder); b.addEventListener('input', garder);
+    s.addEventListener('click', function(){
+      liste.splice(i,1);
+      donnees.screening_parties_json = JSON.stringify(liste);
+      peindreParties(); sauverPlusTard();
+    });
+    l.appendChild(a); l.appendChild(b); l.appendChild(s); z.appendChild(l);
+  });
+  donnees.screening_parties_json = JSON.stringify(liste);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Masques et validation
+   ══════════════════════════════════════════════════════════════════════════ */
+function masqueTel(el){
+  var v = el.value.replace(/\D/g,'').slice(0,10);
+  el.value = v.length > 6 ? '(' + v.slice(0,3) + ') ' + v.slice(3,6) + '-' + v.slice(6)
+    : v.length > 3 ? '(' + v.slice(0,3) + ') ' + v.slice(3)
+    : v.length > 0 ? '(' + v : '';
+}
+function masqueDate(el){
+  var v = el.value.replace(/\D/g,'').slice(0,8);
+  el.value = v.length > 4 ? v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4)
+    : v.length > 2 ? v.slice(0,2)+'/'+v.slice(2) : v;
+}
+function masqueSsn(el){
+  var v = el.value.replace(/\D/g,'').slice(0,9);
+  el.value = v.length > 5 ? v.slice(0,3)+'-'+v.slice(3,5)+'-'+v.slice(5)
+    : v.length > 3 ? v.slice(0,3)+'-'+v.slice(3) : v;
+}
+
+/* Aucun `input type=date` nulle part : le selecteur natif affiche le format du
+   telephone, donc jj/mm/aaaa a un patient du Maryland. */
+function dateValide(s){
+  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s || '');
+  if (!m) return null;
+  var mo = +m[1], j = +m[2], a = +m[3];
+  if (mo < 1 || mo > 12 || j < 1 || j > 31 || a < 1900) return null;
+  var d = new Date(a, mo - 1, j);
+  if (d.getFullYear() !== a || d.getMonth() !== mo - 1 || d.getDate() !== j) return null;
+  return d;
+}
+function ageDepuis(s){
+  var d = dateValide(s); if (!d) return null;
+  var n = new Date(), a = n.getFullYear() - d.getFullYear();
+  var m = n.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && n.getDate() < d.getDate())) a--;
+  return a;
+}
+function erreurSsn(v){
+  if (!v) return 'Your Social Security Number is required.';
+  if (/[a-zA-Z]/.test(v)) return 'Digits only — no letters.';
+  if (!/^\d{3}-\d{2}-\d{4}$/.test(v)) return 'The format is XXX-XX-XXXX.';
+  var p = v.split('-'), z = p[0];
+  if (z === '000' || z === '666' || parseInt(z,10) >= 900) return 'That is not a valid SSN area number.';
+  if (p[1] === '00') return 'The middle group cannot be 00.';
+  if (p[2] === '0000') return 'The last group cannot be 0000.';
+  return '';
+}
+function poser(id, msg){
+  var e = $('e_' + id), c = $(id) || $('c_' + id);
+  if (e){ e.textContent = msg; e.classList.toggle('on', !!msg); }
+  if (c) c.classList.toggle('err', !!msg);
+  return !msg;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Ce qui bloque, et comment on le dit
+   ───────────────────────────────────────────────────────────────────────────
+   Un message glisse sous le champ fautif ne suffit pas : sur un telephone, ce
+   champ peut etre a deux ecrans de la, et le patient voit seulement que
+   « Continue » ne fait rien. Yanis s'y est fait prendre en testant, trois fois
+   de suite, sans jamais savoir quelle question coincait.
+
+   Chaque refus produit donc AUSSI un recapitulatif en tete d'etape, qui nomme
+   les questions manquantes et permet de sauter a chacune.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var problemes = [];
+
+/* Un email valide, sans pretendre valider plus que ce qu'on peut : une seule
+   arobase, du texte avant, un domaine avec un point et une extension d'au
+   moins deux lettres. On refuse ce qui est clairement faux, on n'invente pas
+   une liste de domaines autorises. */
+function erreurEmail(v){
+  v = (v || '').trim();
+  if (!v) return '';
+  if (v.indexOf(' ') !== -1) return 'An email address cannot contain a space.';
+  var parts = v.split('@');
+  if (parts.length !== 2) return 'An email address needs one @, like name@example.com.';
+  if (!parts[0]) return 'Something is missing before the @.';
+  var dom = parts[1];
+  if (dom.indexOf('.') === -1) return 'The part after the @ needs a dot, like example.com.';
+  if (!/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(dom)) return 'That does not look like a real domain name.';
+  if (/\.\./.test(v) || /^[.-]|[.-]$/.test(parts[0])) return 'That email address looks mistyped.';
+  return '';
+}
+
+/* Signale un manque : le message sous le champ, ET une ligne nommee dans le
+   recapitulatif. `cible` est l'element vers lequel le patient saute. */
+function manque(id, msg, nom, cible){
+  poser(id, msg);
+  /* Un champ vide declenche parfois deux controles, l'obligation et le
+     format. Le patient n'a qu'un probleme : une seule ligne. */
+  for (var i = 0; i < problemes.length; i++) if (problemes[i].id === id) return;
+  problemes.push({ id: id, nom: nom || msg, msg: msg,
+                   cible: cible || $(id) || $('c_' + id) });
+}
+
+/* Le recapitulatif se pose en tete de l'etape courante, au-dessus de la
+   premiere carte, et disparait des que tout est rempli. */
+function peindreBilan(){
+  var b = $('bilan'), sec = $(etapeId);
+  if (!problemes.length){ b.hidden = true; return; }
+  if (sec && b.parentNode !== sec){
+    var premiere = sec.querySelector('.carte');
+    if (premiere) sec.insertBefore(b, premiere); else sec.appendChild(b);
+  }
+  $('bilanTitre').textContent = problemes.length === 1
+    ? 'One answer is missing before you can continue'
+    : problemes.length + ' answers are missing before you can continue';
+  var l = $('bilanListe'); l.innerHTML = '';
+  problemes.forEach(function(pb){
+    var li = document.createElement('li');
+    var bt = document.createElement('button');
+    bt.type = 'button'; bt.className = 'bilan-b';
+    bt.innerHTML = '<b>' + echapper(pb.nom) + '</b><span>' + echapper(pb.msg) + '</span>';
+    bt.addEventListener('click', function(){
+      if (!pb.cible) return;
+      pb.cible.scrollIntoView({ behavior:'smooth', block:'center' });
+      pb.cible.classList.add('vise');
+      setTimeout(function(){ pb.cible.classList.remove('vise'); }, 1600);
+      var champ = pb.cible.matches && pb.cible.matches('input,textarea,select')
+        ? pb.cible : pb.cible.querySelector && pb.cible.querySelector('input,textarea');
+      if (champ && !champ.disabled && !champ.hidden) setTimeout(function(){ champ.focus(); }, 420);
+    });
+    li.appendChild(bt); l.appendChild(li);
+  });
+  b.hidden = false;
+}
+
+function valider(n){
+  var ok = true, premier = null;
+  problemes = [];
+  /* Ce que les echappatoires dispensent de remplir. */
+  var saute = {};
+  (REQUIS[n] || []).forEach(function(r){
+    var id = r[0], nom = r[1], type = r[2];
+    if (saute[id]){ poser(id, ''); return; }
+    var v = type === 'chip' ? (donnees[id] || '') : (($(id) && $(id).value) || '').trim();
+    if (!v){
+      manque(id, nom + ' is required.', nom, $(id) || $('c_' + id) || $('e_' + id));
+      ok = false; premier = premier || problemes[problemes.length - 1].cible;
+    } else poser(id, '');
+  });
+  if (n === 'et_identite'){
+    var dob = ($('date_of_birth').value || '').trim();
+    if (dob){
+      var d = dateValide(dob);
+      if (!d){ manque('date_of_birth','Please use MM/DD/YYYY.','Date of birth'); ok = false; premier = premier || $('date_of_birth'); }
+      else if (d > new Date()){ manque('date_of_birth','That date is in the future.','Date of birth'); ok = false; premier = premier || $('date_of_birth'); }
+    }
+    /* Le SSN n'est plus obligatoire ; s'il est ecrit, il doit etre juste. */
+    var vs = ($('ssn').value || '').trim();
+    if (vs){
+      var es = erreurSsn(vs);
+      if (es){ manque('ssn', es, 'Social Security Number'); ok = false; premier = premier || $('ssn'); }
+    } else poser('ssn', '');
+    var a = ageDepuis(dob);
+    if (a !== null && a < 18 && !($('guardian_name').value || '').trim()){
+      manque('guardian_name','A parent or legal guardian is required for a minor.','Parent or legal guardian');
+      ok = false; premier = premier || $('guardian_name');
+    }
+  }
+  if (n === 'et_contact'){
+    ['cell_phone','home_phone','emergency_phone'].forEach(function(id){
+      var v = ($(id).value || '').replace(/\D/g,'');
+      if (v && v.length !== 10){ manque(id,'A phone number is exactly 10 digits.','Phone number'); ok = false; premier = premier || $(id); }
+    });
+    var em = ($('email').value || '').trim();
+    var pbEmail = erreurEmail(em);
+    if (pbEmail){ manque('email', pbEmail, 'Email'); ok = false; premier = premier || $('email'); }
+    else poser('email','');
+    if (($('address_zip').value||'').replace(/\D/g,'').length !== 5 && $('address_zip').value){
+      manque('address_zip','A ZIP code is 5 digits.','ZIP code'); ok = false; premier = premier || $('address_zip');
+    }
+  }
+  if (n === 'et_couverture'){
+    /* La piece d'identite est exigee la ou on la demande, pas trois etapes
+       plus tot : un message d'erreur doit designer quelque chose de visible. */
+    if (!photos.image_id_front || !photos.image_id_back){
+      manque('photos','Please add the front and the back of your photo ID.','Photo ID, front and back', $('zonePhotos'));
+      ok = false; premier = premier || $('zonePhotos');
+    } else poser('photos','');
+  }
+  if (n === 'et_urgence'){
+    var p = ($('ec1_phone_am').value || '').replace(/\D/g,'');
+    if (p && p.length !== 10){ manque('ec1_phone_am','A phone number is exactly 10 digits.','Emergency contact phone'); ok = false; premier = premier || $('ec1_phone_am'); }
+  }
+  if (n === 'et_vous' && !estMineur() && !donnees.employed){
+    manque('employed', 'Employment is required.', 'Employment', $('bloc_emploi'));
+    ok = false; premier = premier || $('bloc_emploi');
+  }
+  if (n === 'et_signature'){
+    if (donnees.legal_ok !== 'Yes'){
+      manque('legal_ok','Please read the documents to the end and tick the box.','Reading and agreeing to the forms', $('caseLegale'));
+      ok = false; premier = premier || $('caseLegale');
+    } else poser('legal_ok','');
+    if (!padClient.signe()){
+      manque('signature','Please sign with your finger.','Your signature', $('padClient'));
+      ok = false; premier = premier || $('padClient');
+    } else poser('signature','');
+    if (estMineurStrict() && !padTuteur.signe()){
+      manque('guardian_signature','A guardian must sign for a client under 13.','Guardian signature', $('padTuteur'));
+      ok = false; premier = premier || $('padTuteur');
+    } else poser('guardian_signature','');
+  }
+  peindreBilan();
+  /* On remonte en tete d'etape, pas au champ fautif : le patient doit d'abord
+     voir COMBIEN il en reste et lesquels, avant d'aller au premier. Et en
+     tete, pas au centre du recapitulatif, sinon son propre titre passe
+     au-dessus du bord de l'ecran. */
+  if (!ok) hautDePage(true);
+  return ok;
+}
+
+/* ── La regle du mineur, lue dans le document du cabinet ────────────────────
+   « Client is minor 13 years and older and is self-referred, client may sign
+   without guardian. » Donc : 18 ans et plus, il signe seul ; 13 a 17 ans, le
+   tuteur est propose sans etre impose ; moins de 13 ans, il est obligatoire. */
+function ageClient(){ return ageDepuis(($('date_of_birth').value || '').trim()); }
+function estMineur(){ var a = ageClient(); return a !== null && a < 18; }
+function estMineurStrict(){ var a = ageClient(); return a !== null && a < 13; }
+
+function majAge(){
+  var a = ageClient();
+  $('age').value = (a === null ? '' : String(a));
+  donnees.age = $('age').value;
+  var n = $('noteAge');
+  n.textContent = (a === null) ? '' : (a === 1 ? 'You are 1 year old.' : 'You are ' + a + ' years old.');
+  n.hidden = (a === null);
+  montrer($('si_guardian'), estMineur());
+}
+function majTuteur(){
+  var m = estMineur();
+  $('carteTuteur').hidden = !m;
+  if (!m) return;
+  $('noteTuteur').innerHTML = estMineurStrict()
+    ? 'The client is under 13, so a parent or legal guardian <b>must</b> sign as well.'
+    : 'The client is 13 or older. If they were self-referred they may sign alone; otherwise a guardian signs here too.';
+  if (!$('guardian_printed_name').value && $('guardian_name').value){
+    $('guardian_printed_name').value = $('guardian_name').value;
+    donnees.guardian_printed_name = $('guardian_name').value;
+  }
+}
+function majRelation(){
+  var v = $('relationship_rating').value;
+  $('valRel').textContent = v;
+  donnees.relationship_rating = v;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Photos
+   ══════════════════════════════════════════════════════════════════════════ */
+/* ── Les cinq photos ───────────────────────────────────────────────────────
+   On touche une vignette, l'appareil photo du telephone s'ouvre, on prend,
+   il revient. C'est tout.
+
+   La sequence guidee maison, avec sa video en direct dans une modale, a ete
+   retiree le 2026-09-06 : elle imposait un cadre etroit, une image de qualite
+   moindre que celle de l'appareil natif, et une esthetique de webcam a un
+   patient qui a deja son appareil photo dans la main. Un an de reglages fins
+   du constructeur contre trente lignes de canvas : ce n'etait pas un combat
+   a mener.
+   ───────────────────────────────────────────────────────────────────────────────── */
+function peindrePhotos(){
+  var z = $('zonePhotos'); z.innerHTML = '';
+  var g = document.createElement('div');
+  g.className = 'photo-grille';
+  /* Les inputs vivent HORS des vignettes, et chaque vignette est un <label
+     for>. Deux raisons, toutes deux constatees :
+
+     1. avec l'input DANS la vignette, `input.click()` declenchait un clic qui
+        remontait a la vignette, qui rappelait `input.click()`. Le navigateur
+        finissait par n'ouvrir aucun selecteur, ou dix.
+     2. l'input portait `hidden`, et la feuille de style ajoute
+        `input[type=file]{display:none}`. Safari sur iPhone refuse d'ouvrir
+        l'appareil photo pour un input en `display:none`.
+
+     Un <label for> n'a besoin d'aucun JavaScript : le navigateur ouvre
+     l'appareil lui-meme, et c'est le montage qu'il gere le mieux. */
+  var boite = document.createElement('div');
+  boite.className = 'photo-inputs';
+
+  PHOTOS.forEach(function(p, i){
+    var idIn = 'f_' + p.cle;
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.id = idIn;
+    input.className = 'photo-input';
+    input.accept = 'image/*';
+    input.setAttribute('capture', p.cam);
+    input.setAttribute('data-r', 'cam');
+    input.addEventListener('change', function(){ recevoirPhoto(input, p.cle); });
+    boite.appendChild(input);
+
+    var l = document.createElement('label');
+    l.className = 'photo' + (photos[p.cle] ? ' on' : '');
+    l.id = 'ph_' + p.cle;
+    l.setAttribute('for', idIn);
+    l.innerHTML = (photos[p.cle]
+        ? '<img alt="" src="' + photos[p.cle] + '">'
+        : '<div class="photo-vide">' + (i + 1) + '</div>')
+      + '<div class="photo-t">' + p.titre + '</div>'
+      + '<div class="photo-e">' + (photos[p.cle] ? '\u2713 Taken \u2014 tap to redo' : 'Tap to take it') + '</div>';
+    g.appendChild(l);
+  });
+  z.appendChild(g);
+  z.appendChild(boite);
+}
+
+
+function recevoirPhoto(input, cle){
+  var f = input.files && input.files[0]; if (!f) return;
+  if (f.size > CONFIG.MAX_PHOTO_MO * 1024 * 1024){
+    poser('photos','That image is over ' + CONFIG.MAX_PHOTO_MO + ' MB. Try again with less zoom.');
+    input.value = ''; return;
+  }
+  var l = new FileReader();
+  l.onload = function(){
+    reduire(l.result, CONFIG.COTE_PHOTO, 0.82, function(uri){
+      photos[cle] = uri; poser('photos',''); peindrePhotos();
+    });
+  };
+  l.readAsDataURL(f);
+  input.value = '';
+}
+/* Une photo de telephone pese plusieurs megaoctets ; a 1200 px le texte d'une
+   carte d'assurance reste lisible et le dossier tient dans un envoi. */
+function reduire(uri, cote, qualite, fini){
+  var im = new Image();
+  im.onload = function(){
+    var e = Math.min(1, cote / Math.max(im.width, im.height));
+    var c = document.createElement('canvas');
+    c.width = Math.round(im.width * e); c.height = Math.round(im.height * e);
+    var g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(im, 0, 0, c.width, c.height);
+    fini(c.toDataURL('image/jpeg', qualite));
+  };
+  im.onerror = function(){ fini(uri); };  /* illisible : envoye tel quel plutot que perdu */
+  im.src = uri;
+}
+
+/* Le scan du code-barres de la piece d'identite a ete retire le 2026-09-05,
+   a la demande de Yanis. Il lisait le PDF417 au dos des permis americains
+   (norme AAMVA) et remplissait huit champs d'un coup, en local, sans serveur.
+   Le code et la bibliotheque ZXing sont partis avec lui : du code mort qui
+   charge une bibliotheque est une charge d'entretien, pas une option.
+   L'historique git le garde si la question revient. */
+
+function alerteDouce(m){
+  var t = $('toastSauve');
+  t.textContent = m; t.style.maxWidth = '86vw'; t.style.textAlign = 'center';
+  t.classList.add('on');
+  setTimeout(function(){ t.classList.remove('on'); setTimeout(function(){ t.textContent = 'Saved'; }, 400); }, 4200);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Signature — pad maison, sans dependance
+   ══════════════════════════════════════════════════════════════════════════ */
+function fairePad(idPad, idCanvas){
+  var boite = $(idPad), cv = $(idCanvas), ctx = cv.getContext('2d');
+  var trace = false, dernier = null, api = { signe: function(){ return signe; } };
+  var signe = false;
+
+  function taille(){
+    var garde = signe ? cv.toDataURL('image/png') : null;
+    var r = window.devicePixelRatio || 1, b = cv.getBoundingClientRect();
+    if (!b.width) return;
+    cv.width = Math.round(b.width * r); cv.height = Math.round(b.height * r);
+    ctx.setTransform(r, 0, 0, r, 0, 0);
+    ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#0E130D';
+    if (garde){ var im = new Image(); im.onload = function(){ ctx.drawImage(im, 0, 0, b.width, b.height); }; im.src = garde; }
+  }
+  function pt(e){
+    var b = cv.getBoundingClientRect();
+    var s = e.touches ? e.touches[0] : e;
+    return { x: s.clientX - b.left, y: s.clientY - b.top };
+  }
+  function debut(e){ e.preventDefault(); trace = true; dernier = pt(e); }
+  function bouge(e){
+    if (!trace) return; e.preventDefault();
+    var p = pt(e);
+    ctx.beginPath(); ctx.moveTo(dernier.x, dernier.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    dernier = p;
+    if (!signe){ signe = true; boite.classList.add('on'); }
+  }
+  function fin(){ if (trace){ trace = false; sauverPlusTard(); } }
+
+  cv.addEventListener('mousedown', debut); cv.addEventListener('mousemove', bouge);
+  window.addEventListener('mouseup', fin);
+  cv.addEventListener('touchstart', debut, { passive:false });
+  cv.addEventListener('touchmove', bouge, { passive:false });
+  cv.addEventListener('touchend', fin);
+
+  api.dimensionner = taille;
+  api.effacer = function(){ ctx.clearRect(0,0,cv.width,cv.height); signe = false; boite.classList.remove('on'); };
+  api.donnee = function(){ return signe ? cv.toDataURL('image/png') : ''; };
+  return api;
+}
+var padClient, padTuteur, padTemoin, padStaff, padPrp;
+function dimensionnerPads(){
+  [padClient, padTuteur, padTemoin, padStaff, padPrp].forEach(function(p){
+    if (p) setTimeout(p.dimensionner, 30);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Le pave legal
+   ──────────────────────────────────────────────────────────────────────────
+   Les textes viennent de documents.js, pas d'une copie dans cette page : ce
+   qui est lu ici est litteralement ce qui sera imprime. La case reste
+   verrouillee tant que le pave n'a pas ete deroule jusqu'au bout.
+   ══════════════════════════════════════════════════════════════════════════ */
+function peindreLegal(){
+  var z = $('legalDef'), blocs = window.TEXTES_LEGAUX_ABILITY || [];
+  var h = '';
+  blocs.forEach(function(b, i){
+    h += '<h4 data-rang="' + (i + 1) + '" data-titre="' + echapper(b.titre) + '">'
+      + echapper(b.titre) + '</h4><div class="st">' + echapper(b.sousTitre) + '</div>';
+    String(b.intro || '').split('\n\n').forEach(function(p){ if (p.trim()) h += '<p>' + echapper(p) + '</p>'; });
+    if (b.puces && b.puces.length){
+      h += '<ul>';
+      b.puces.forEach(function(p){ h += '<li>' + echapper(p) + '</li>'; });
+      h += '</ul>';
+    }
+    (b.corps || []).forEach(function(p){ h += '<p>' + echapper(p) + '</p>'; });
+  });
+  z.innerHTML = h;
+  /* C'est la page qui defile, plus le bloc : on ecoute le conteneur. */
+  document.querySelector('main').addEventListener('scroll', suivreLecture, { passive: true });
+  suivreLecture();
+}
+function echapper(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function suivreLecture(){
+  var z = $('legalDef'), m = document.querySelector('main');
+  if (!z || !m) return;
+  /* Tant que l'etape est masquee, le bloc mesure zero de haut. Sans ce
+     garde-fou on en concluait qu'il n'y avait rien a derouler, donc que tout
+     etait lu, et la case se deverrouillait d'elle-meme au chargement : le
+     patient pouvait signer sept documents sans qu'un mot ait defile. */
+  if (!z.offsetHeight) return;
+
+  /* La lecture se mesure sur la page, plus sur une boite : combien du bloc
+     juridique est deja passe au-dessus du bas de l'ecran. */
+  var haut = z.getBoundingClientRect().top - m.getBoundingClientRect().top + m.scrollTop;
+  var bas = haut + z.offsetHeight;
+  var vu = m.scrollTop + m.clientHeight;
+  var part = Math.max(0, Math.min(1, (vu - haut) / Math.max(1, bas - haut)));
+
+  $('legalBarre').style.width = Math.round(part * 100) + '%';
+  var lu = part >= 0.985;
+
+  var titres = $$('h4[data-rang]', z), total = titres.length, courant = titres[0];
+  var repere = m.getBoundingClientRect().top + 120;
+  for (var i = 0; i < total; i++){
+    if (titres[i].getBoundingClientRect().top <= repere) courant = titres[i]; else break;
+  }
+  if (courant){
+    $('legalOu').textContent = 'Document ' + courant.dataset.rang + ' of ' + total
+      + ' \u00b7 ' + courant.dataset.titre;
+  }
+  $('legalEtat').textContent = lu ? 'Read to the end'
+    : (courant ? courant.dataset.rang : 1) + '/' + total + ' \u00b7 ' + Math.round(part * 100) + '%';
+  $('legalEtat').classList.toggle('lu', lu);
+  if (lu) $('caseLegale').classList.remove('bloque');
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Recapitulatif
+   ══════════════════════════════════════════════════════════════════════════ */
+/* Le recapitulatif tenait sur neuf lignes et un tableau, juste avant deux
+   mille mots de textes juridiques : le patient defilait deux fois plus pour
+   relire ce qu'il venait d'ecrire. Quatre lignes suffisent a le rassurer sur
+   l'essentiel, et un seul bouton le ramene s'il veut corriger. */
+/* Deux lignes, et un bouton. Le recapitulatif tenait sur quatre lignes dans
+   un encadre, juste avant deux mille mots de textes juridiques : c'etait un
+   obstacle de plus a franchir avant l'obstacle. Le patient a besoin de
+   verifier son nom et son adresse, pas de relire son dossier. */
+/* Le rappel de ce qui a ete decide a l'etape du partage. */
+function peindreRappelPartage(){
+  var z = $('rappelPartage'), t = $('rappelPartageTexte');
+  if (!z || !t) return;
+  if (!donnees.exchange_any){ z.hidden = true; return; }
+  if (donnees.exchange_any === 'No'){
+    t.innerHTML = 'You asked us <b>not</b> to share your file with anyone.';
+  } else {
+    var qui = v('exchange_agency_name') || 'the person you named';
+    var n = ECHANGE.filter(function(e){ return donnees[e[0]] === 'Yes'; }).length;
+    t.innerHTML = 'You agreed we may share <b>' + n + (n === 1 ? ' item' : ' items')
+      + '</b> with <b>' + echapper(qui) + '</b>.';
+  }
+  z.hidden = false;
+}
+
+function peindreRecap(){
+  var nom = (v('first_name') + ' ' + v('last_name')).trim();
+  var l1 = [nom, v('date_of_birth'), v('cell_phone') || v('home_phone')].filter(Boolean).join('  \u00b7  ');
+  var l2 = [[v('address_street'), v('address_city'), v('address_state')].filter(Boolean).join(', '),
+            v('insurance_primary'),
+            Object.keys(photos).length + '/5 photos'].filter(Boolean).join('  \u00b7  ');
+  $('recap').innerHTML =
+      '<div class="recap-l">' + echapper(l1) + '</div>'
+    + '<div class="recap-l">' + echapper(l2) + '</div>'
+    + '<button type="button" class="lien" id="recapEdit">Something is wrong</button>';
+  $('recapEdit').addEventListener('click', function(){ aller('et_identite'); });
+  peindreRappelPartage();
+  if (!$('printed_name').value){
+    $('printed_name').value = nom;
+    donnees.printed_name = nom;
+  }
+  $('dateSig').textContent = aujourdhui();
+}
+function v(id){ var e = $(id); return e ? (e.value || '').trim() : ''; }
+function aujourdhui(){
+  return new Date().toLocaleDateString('en-US', {
+    month:'2-digit', day:'2-digit', year:'numeric', timeZone:'America/New_York'
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Envoi
+   ══════════════════════════════════════════════════════════════════════════ */
+function composer(){
+  var p = {};
+  $$('input, textarea, select').forEach(function(e){
+    if (!e.id || e.type === 'file' || e.type === 'range') return;
+    p[e.id] = (e.value || '').trim();
+  });
+  for (var k in donnees) if (donnees.hasOwnProperty(k) && !(k in p)) p[k] = donnees[k];
+
+  /* Page 16 du dossier papier, « Community Supports : Family/Significant
+     Other ». L'ecran ne la demande plus : elle redemandait, sous un autre
+     titre, la personne que le patient venait de nommer comme contact
+     d'urgence. Elle se remplit donc de ce contact.
+
+     Ce n'est pas une invention : c'est la lecture que Yanis fait de la
+     pratique du cabinet, et le patient qui veut nommer quelqu'un d'autre a le
+     bouton « + Add another emergency contact ». Si le cabinet demande deux
+     personnes vraiment distinctes, il faudra rouvrir la carte. */
+  if (!p.support_name){
+    p.support_name = p.ec1_name || '';
+    p.support_relationship = p.ec1_relationship || '';
+    p.support_phone = p.ec1_phone_am || '';
+    p.support_address = [p.ec1_street, p.ec1_apt, p.ec1_city,
+      [p.ec1_state, p.ec1_zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  }
+
+  p.full_name = (p.first_name + ' ' + p.last_name).trim();
+  p.today_date = aujourdhui();
+  p.signature_date = aujourdhui();
+  p.age = String(ageClient() === null ? '' : ageClient());
+  p.relationship_rating = $('relationship_rating').value;
+  p.signature_image = padClient.donnee();
+  p.guardian_signature_image = padTuteur.donnee();
+  p.witness_signature_image = padTemoin.donnee();
+  p.staff_signature_image = padStaff.donnee();
+  p.prp_signature_image = padPrp.donnee();
+  p.staff_date_signed = p.staff_signature_image ? aujourdhui() : '';
+  p.prp_signature_date = p.prp_signature_image ? aujourdhui() : '';
+  p.witness_signature_date = p.witness_signature_image ? aujourdhui() : '';
+  try{ p.screening_parties = JSON.parse(donnees.screening_parties_json || '[]'); }
+  catch(e){ p.screening_parties = []; }
+  delete p.screening_parties_json;
+
+  p.image_face = photos.image_face || '';
+  p.image_id_front = photos.image_id_front || '';
+  p.image_id_back = photos.image_id_back || '';
+  p.image_insurance_front = photos.image_insurance_front || '';
+  p.image_insurance_back = photos.image_insurance_back || '';
+
+  p.client_is_minor = estMineur() ? 'Yes' : 'No';
+  p.form_version = CONFIG.VERSION;
+  p.reference = refDossier;
+  p.submitted_at = new Date().toLocaleString('en-US', { timeZone:'America/New_York' });
+  return p;
+}
+
+function reference(){
+  var d = new Date(), r = '';
+  for (var i = 0; i < 4; i++) r += '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*34)];
+  return 'AES-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0')
+    + String(d.getDate()).padStart(2,'0') + '-' + r;
+}
+
+async function envoyer(){
+  refDossier = reference();
+  var p = composer();
+  $('mast').hidden = true; $('barre').hidden = true;
+  ETAPES.forEach(function(e){ var el = $(e.id); if (el) el.hidden = true; });
+  $('attente').hidden = false;
+  hautDePage();
+  var arret = rebours(CONFIG.REBOURS);
+  var debut = Date.now();
+
+  /* Les documents sont fabriques sur l'appareil du patient. Meme si l'envoi
+     echoue ensuite, il repart avec son dossier : perdre vingt minutes de
+     saisie serait pire qu'un depot a refaire. */
+  var erreurDoc = '';
+  try{
+    docsProduits = await window.construireDocumentsAbility(p);
+    for (var k in docsProduits){
+      if (k.indexOf('pdf_') === 0) p[k] = docsProduits[k];
+    }
+    p.documents_produits = docsProduits.documents_produits;
+    /* Les photos sont desormais dans les documents. Les renvoyer en clair
+       doublerait le poids de l'envoi pour rien. */
+    p.image_face = p.image_id_front = p.image_id_back = '';
+    p.image_insurance_front = p.image_insurance_back = '';
+    p.pdf_error = '';
+  }catch(e){
+    erreurDoc = String((e && e.message) || e);
+    p.pdf_error = 'Document build failed: ' + erreurDoc;
+  }
+  delete p._docs;
+
+  var ok = await poster(p);
+  arret();
+  var passe = Date.now() - debut;
+  setTimeout(function(){ terminer(ok, erreurDoc); }, Math.max(0, CONFIG.MIN_ATTENTE - passe));
+}
+
+function poster(p){
+  return new Promise(function(fini){
+    var c = new AbortController();
+    var t = setTimeout(function(){ c.abort(); }, CONFIG.ABANDON);
+    fetch(CONFIG.WEBHOOK, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(p), signal: c.signal
+    }).then(function(r){ clearTimeout(t); fini(r.ok); })
+      .catch(function(){ clearTimeout(t); mettreEnFile(p); fini(false); });
+  });
+}
+/* La file locale ne porte que le dossier relie : c'est lui qui compte, et
+   cinq documents de plus feraient sauter le quota de localStorage. */
+function mettreEnFile(p){
+  try{
+    var f = JSON.parse(localStorage.getItem(CONFIG.CLE_FILE) || '[]');
+    f.push({ reference:p.reference, full_name:p.full_name, submitted_at:p.submitted_at,
+             pdf_packet:p.pdf_packet, pdf_packet_nom:p.pdf_packet_nom, form_version:p.form_version });
+    localStorage.setItem(CONFIG.CLE_FILE, JSON.stringify(f));
+    peindreFile();
+  }catch(e){}
+}
+function file(){ try{ return JSON.parse(localStorage.getItem(CONFIG.CLE_FILE) || '[]'); }catch(e){ return []; } }
+function peindreFile(){
+  var f = file(), b = $('bandeauQueue');
+  b.hidden = !f.length;
+  if (f.length) b.textContent = f.length + (f.length === 1 ? ' packet is' : ' packets are')
+    + ' waiting to be filed. We keep trying on our own.';
+}
+function viderFile(){
+  var f = file(); if (!f.length || !navigator.onLine) return;
+  var reste = [];
+  (function suivant(i){
+    if (i >= f.length){
+      try{ localStorage.setItem(CONFIG.CLE_FILE, JSON.stringify(reste)); }catch(e){}
+      peindreFile(); return;
+    }
+    var c = new AbortController();
+    var t = setTimeout(function(){ c.abort(); }, CONFIG.ABANDON);
+    fetch(CONFIG.WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(f[i]), signal:c.signal })
+      .then(function(r){ clearTimeout(t); if (!r.ok) reste.push(f[i]); suivant(i+1); })
+      .catch(function(){ clearTimeout(t); reste.push(f[i]); suivant(i+1); });
+  })(0);
+}
+
+function rebours(secondes){
+  var arc = $('arcAttente'), reste = secondes, total = 339.3, iv;
+  $('compteur').textContent = reste;
+  arc.style.strokeDashoffset = '0';
+  iv = setInterval(function(){
+    reste--;
+    $('compteur').textContent = reste > 0 ? reste : '⏳';
+    arc.style.transition = 'stroke-dashoffset .9s linear';
+    arc.style.strokeDashoffset = String(total * (1 - Math.max(reste,0) / secondes));
+    if (reste <= 0){
+      clearInterval(iv);
+      $('attenteTexte').textContent = 'This is taking longer than usual. Your documents are safe on this device — please keep the page open a little longer.';
+    }
+  }, 1000);
+  return function(){ clearInterval(iv); };
+}
+
+function terminer(ok, erreurDoc){
+  $('attente').hidden = true; $('fini').hidden = false;
+  $('refFinale').textContent = refDossier;
+  if (ok){
+    effacerSauvegarde();
+    $('finiTitre').textContent = 'Your packet is filed';
+    $('finiTexte').textContent = 'Ability and Empowerment Services has your admission packet. Download your own copy below and keep it.';
+  } else {
+    $('finiTitre').textContent = 'Keep your copy — we are still filing';
+    $('finiTexte').textContent = erreurDoc
+      ? 'We could not build your documents on this device. Nothing is lost: your answers are saved here. Please show this screen to the clinic.'
+      : 'Your packet could not reach the clinic yet, and it is saved on this device. We keep trying on our own. Download your copy now and keep it.';
+  }
+  $('btnTelecharger').hidden = !(docsProduits && docsProduits.pdf_packet);
+  peindreAutresDocs();
+  peindreFile();
+
+  /* Sur la tablette du cabinet, le dossier est desormais soit depose, soit
+     dans la file d'envoi qui retente seule. Le brouillon n'a plus de raison
+     d'exister, et il ne doit surtout pas attendre le patient suivant. */
+  if (CONFIG.KIOSQUE){
+    effacerSauvegarde();
+    clearTimeout(minuteurInactif);
+    $('btnRendre').hidden = false;
+  }
+  hautDePage();
+}
+function peindreAutresDocs(){
+  var z = $('autresDocs'); z.innerHTML = '';
+  if (!docsProduits) return;
+  var d = document.createElement('details');
+  d.style.cssText = 'max-width:330px;margin:0 auto;text-align:left';
+  d.innerHTML = '<summary style="cursor:pointer;font:500 14px var(--sans);color:var(--bleu);padding:8px 0">Download the forms separately</summary>';
+  var box = document.createElement('div');
+  box.style.cssText = 'display:flex;flex-direction:column;gap:7px;padding:6px 0';
+  Object.keys(docsProduits).forEach(function(k){
+    if (k.indexOf('pdf_') !== 0 || /_nom$/.test(k) || k === 'pdf_packet') return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'mini';
+    b.textContent = (docsProduits[k + '_nom'] || k).replace(/_/g,' ').replace(/\.pdf$/,'');
+    b.addEventListener('click', function(){ garder(docsProduits[k], docsProduits[k + '_nom']); });
+    box.appendChild(b);
+  });
+  d.appendChild(box); z.appendChild(d);
+}
+function garder(b64, nom){
+  try{
+    var bin = atob(b64), n = bin.length, u = new Uint8Array(n);
+    while (n--) u[n] = bin.charCodeAt(n);
+    var url = URL.createObjectURL(new Blob([u], { type:'application/pdf' }));
+    var a = document.createElement('a');
+    a.href = url; a.download = nom || 'Admission Packet.pdf';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
+  }catch(e){ alerteDouce('Your browser blocked the download. Try again, or ask the clinic for a copy.'); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Demarrage
+   ══════════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   La tablette partagee
+   ──────────────────────────────────────────────────────────────────────────
+   Ce formulaire vit sur une tablette d'accueil : le patient suivant recoit
+   l'appareil du precedent. Tout ce qui « se souvient » devient une fuite.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Le navigateur propose le nom et l'adresse du patient precedent des qu'un
+   champ est touche. On le lui interdit champ par champ. A savoir : c'est une
+   demande, pas une garantie. Chrome passe outre pour les adresses quand il
+   croit reconnaitre un formulaire. La coupure sure est dans les reglages de
+   Chrome de la tablette, et elle est notee dans le README. */
+function couperAutofill(){
+  if (!CONFIG.KIOSQUE) return;
+  $$('input, textarea, select').forEach(function(el){
+    el.setAttribute('autocomplete', 'off');
+    el.setAttribute('autocorrect', 'off');
+  });
+}
+
+/* Un patient qui s'interrompt laisse ses reponses a l'ecran pour le suivant.
+   Au bout de cinq minutes sans un geste, on previent trente secondes, puis on
+   rend une tablette vierge. Le moindre contact desarme le compteur. */
+var minuteurInactif = null, tictacInactif = null, onQuitte = false;
+function armerInactivite(){
+  if (!CONFIG.KIOSQUE) return;
+  clearTimeout(minuteurInactif);
+  minuteurInactif = setTimeout(preavisInactivite, CONFIG.INACTIVITE);
+}
+function preavisInactivite(){
+  if (!demarre || !$('fini').hidden) return;
+  var reste = Math.round(CONFIG.PREAVIS / 1000);
+  $('compteInactif').textContent = reste;
+  $('modaleInactif').classList.add('on');
+  clearInterval(tictacInactif);
+  tictacInactif = setInterval(function(){
+    reste--;
+    $('compteInactif').textContent = reste > 0 ? reste : 0;
+    if (reste <= 0) rendreLaTablette();
+  }, 1000);
+}
+function annulerPreavis(){
+  clearInterval(tictacInactif);
+  $('modaleInactif').classList.remove('on');
+  armerInactivite();
+}
+/* On efface le brouillon, jamais la file d'envoi : un dossier deja signe et
+   pas encore parti doit survivre a ce nettoyage. */
+function rendreLaTablette(){
+  clearInterval(tictacInactif);
+  onQuitte = true;
+  effacerSauvegarde();
+  location.replace(location.pathname + location.search);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Repondre sans taper
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Rejouable : on retire la classe avant de la remettre, sinon le navigateur
+   ne relance pas l'animation sur un element qui la porte deja. */
+function ressaut(b){
+  if (!b) return;
+  b.classList.remove('pop');
+  void b.offsetWidth;
+  b.classList.add('pop');
+  setTimeout(function(){ b.classList.remove('pop'); }, 300);
+}
+
+function marquerFait(b, mot){
+  if (b.dataset.motInitial === undefined) b.dataset.motInitial = b.textContent;
+  b.textContent = '✓ ' + mot;
+  b.style.borderColor = 'var(--vert)'; b.style.color = 'var(--vert)';
+  setTimeout(function(){
+    b.textContent = b.dataset.motInitial;
+    b.style.borderColor = ''; b.style.color = '';
+  }, 1800);
+}
+
+
+/* Le contact d'urgence habite tres souvent chez le patient. Cinq champs. */
+var COPIE_ADRESSE = [['address_street','_street'], ['address_apt','_apt'],
+                     ['address_city','_city'], ['address_state','_state'],
+                     ['address_zip','_zip']];
+function brancherCopies(){
+  $$('[data-copie-adresse]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var prefixe = b.dataset.copieAdresse;
+      COPIE_ADRESSE.forEach(function(c){
+        var src = $(c[0]), dst = $(prefixe + c[1]);
+        if (src && dst){ dst.value = src.value; donnees[dst.id] = dst.value; poser(dst.id, ''); }
+      });
+      marquerFait(b, 'Copied');
+      sauverPlusTard();
+    });
+  });
+
+  /* Le bouton « Same as my emergency contact » a ete retire le 2026-09-05,
+     en meme temps que le second contact d'urgence. Avec un seul contact, le
+     recopier dans le proche inscrirait la meme personne pour deux roles
+     distincts, et le cabinet croirait avoir deux appuis quand il n'en a
+     qu'un. Le raccourci valait 0,4 minute ; il ne les vaut plus. */
+}
+
+/* Les boutons « Answer No to all » et « Select all » ont ete retires le
+   2026-09-06. Le patient lit les questions une par une et y repond au
+   passage ; un bouton qui repond a sa place l'oblige a remonter verifier,
+   donc a defiler deux fois. Il coutait plus qu'il ne rapportait.
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   La regle des onze
+   ──────────────────────────────────────────────────────────────────────────
+   Reprise du formulaire BCB, ou elle a fait ses preuves. Toute question dont
+   les reponses sont previsibles cesse d'etre un champ vide :
+
+     jusqu'a onze options   →  des chips, tout est visible, un doigt suffit
+     au-dela de onze        →  une liste deroulante filtree par la saisie
+
+   Au-dela de onze, les chips deviennent un mur de texte qu'il faut lire en
+   entier : chercher devient plus lent que taper, et le raccourci se retourne
+   contre le patient. La liste, elle, se reduit a chaque lettre.
+
+   Dans les deux cas le champ reste libre : ce qui est tape a la main est
+   accepte tel quel, et « Other » n'est jamais une impasse.
+
+   Ajouter la regle a un champ tient en un attribut : data-liste="villes".
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var SEUIL_CHIPS = 11;
+
+/* ── Ville et Etat, lies ───────────────────────────────────────────────────
+   Une ville determine son Etat. Demander les deux, c'est poser une question
+   dont on connait deja la reponse, et ouvrir la porte a une incoherence :
+   « Baltimore, VA » part dans un dossier medical sans que rien ne proteste.
+   Le tableau reste local, aucune requete ne sort de l'appareil. */
+var VILLES = [
+  ['Baltimore','MD'], ['Dundalk','MD'], ['Towson','MD'], ['Catonsville','MD'],
+  ['Essex','MD'], ['Parkville','MD'], ['Woodlawn','MD'], ['Randallstown','MD'],
+  ['Pikesville','MD'], ['Rosedale','MD'], ['Halethorpe','MD'], ['Owings Mills','MD'],
+  ['Glen Burnie','MD'], ['Columbia','MD'], ['Ellicott City','MD'], ['Severn','MD'],
+  ['Odenton','MD'], ['Annapolis','MD'], ['Laurel','MD'], ['Bowie','MD'],
+  ['Silver Spring','MD'], ['Wheaton','MD'], ['Rockville','MD'], ['Gaithersburg','MD'],
+  ['Germantown','MD'], ['Bethesda','MD'], ['Hyattsville','MD'], ['College Park','MD'],
+  ['Waldorf','MD'], ['Frederick','MD'], ['Hagerstown','MD'], ['Salisbury','MD'],
+  ['Aberdeen','MD'], ['Bel Air','MD'], ['Edgewood','MD'], ['Elkton','MD'],
+  ['Westminster','MD'], ['Cumberland','MD'], ['Annapolis Junction','MD'],
+  ['Washington','DC'],
+  ['Arlington','VA'], ['Alexandria','VA'], ['Fairfax','VA'], ['Woodbridge','VA'],
+  ['York','PA'], ['Philadelphia','PA'], ['Harrisburg','PA'], ['Lancaster','PA'],
+  ['Wilmington','DE'], ['Newark','DE'], ['Dover','DE']
+];
+
+/* Un index en minuscules : le patient tape « baltimore » aussi souvent. */
+var ETAT_VILLE = (function(){
+  var m = {};
+  VILLES.forEach(function(v){ m[v[0].toLowerCase()] = v[1]; });
+  return m;
+})();
+
+/* Pose l'Etat qui correspond a la ville saisie. Le champ d'Etat reste libre :
+   qui veut le corriger le corrige, et une ville inconnue ne touche a rien. */
+function lierVilleEtat(champ){
+  if (!champ || !/_city$/.test(champ.id)) return;
+  var etat = ETAT_VILLE[(champ.value || '').trim().toLowerCase()];
+  if (!etat) return;
+  var cible = $(champ.id.replace(/_city$/, '_state'));
+  if (!cible || cible.value === etat) return;
+  cible.value = etat;
+  donnees[cible.id] = etat;
+  poser(cible.id, '');
+  /* Le petit eclat dit au patient que quelque chose a bouge sous ses yeux,
+     sinon il ne verra pas que la reponse est deja la. */
+  cible.classList.add('vise');
+  setTimeout(function(){ cible.classList.remove('vise'); }, 1200);
+}
+
+var LISTES = {
+  /* Baltimore et sa couronne d'abord, puis le reste du Maryland par
+     population, puis les villes limitrophes d'ou viennent les patients :
+     Washington, la Virginie du Nord, le sud de la Pennsylvanie, le Delaware.
+
+     Chaque ville porte son Etat, et le pose toute seule dans le champ
+     suivant. C'est la liaison que porte deja le formulaire BCB : la ville
+     determine l'Etat, la redemander est une question pour rien. */
+  villes: VILLES.map(function(v){ return v[0]; }),
+
+  etats: ['MD','DC','VA','PA','DE','WV','NJ','NY','NC','AL','AK','AZ','AR','CA','CO','CT',
+    'FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MA','MI','MN','MS','MO','MT',
+    'NE','NV','NH','NM','ND','OH','OK','OR','RI','SC','SD','TN','TX','UT','VT','WA','WI','WY'],
+
+  /* Les payeurs qui couvrent la patientele de sante mentale a Baltimore.
+     Carelon est l'administrateur de l'Etat, il vient donc tot. */
+  assureurs: ['Maryland Medicaid','Carelon Behavioral Health','Medicare',
+    'CareFirst BlueCross BlueShield','Priority Partners','Amerigroup','Wellpoint',
+    'Maryland Physicians Care','Jai Medical Systems','Aetna','Aetna Better Health',
+    'UnitedHealthcare','Optum','Cigna','Kaiser Permanente','Humana','Tricare',
+    'Johns Hopkins Employer Health Programs','Beacon Health Options',
+    /* Le patient sans couverture le dit ici, dans la liste, au lieu de cocher
+       une case a part : une question, une reponse. */
+    'Self-pay (no insurance)','I do not know'],
+
+  relations: ['Spouse','Partner','Mother','Father','Son','Daughter','Sister','Brother',
+    'Grandmother','Grandfather','Aunt','Uncle','Cousin','Friend','Neighbour',
+    'Legal Guardian','Foster Parent','Social Worker','Case Manager','Pastor or faith leader',
+    'Employer','Other'],
+
+  /* Onze ou moins : ces listes deviennent des chips. */
+  orientation: ['Primary care physician','Hospital or emergency room','Family or friend',
+    'Myself','Court or probation','School','Another therapist','Social services',
+    'Insurance', 'Online search'],
+
+  duree: ['Less than a month','One to three months','Three to six months',
+    'Six months to a year','One to two years','More than two years',
+    'As long as I can remember'],
+
+  emploi: ['Full-time','Part-time','Self-employed','Student','Retired','On disability',
+    'Temporary or seasonal','More than one job','Homemaker','Between jobs'],
+
+  revenu: ['Disability (SSI or SSDI)','Unemployment','Social Security','Family support',
+    'Child support','Pension','Savings','None'],
+
+  foi: ['Christian','Catholic','Baptist','Non-denominational','Muslim','Jewish',
+    'Buddhist','Hindu','Spiritual but not religious','Still figuring it out'],
+
+  lienParent: ['Close','Loving','Supportive','Distant','Strained','Complicated',
+    'No contact','They have passed away'],
+
+  exercice: ['Walking','Gym or weights','Running','Swimming','Cycling','Yoga',
+    'Team sports','Dancing','Workouts at home','Physical job'],
+
+  /* Les quatre choix du dossier papier, plus ce que les gens repondent
+     vraiment. « Other » ouvre la petite boite de saisie. */
+  relationsEchange: ['Self','Legal guardian','Foster parent','Social worker',
+    'Parent','Spouse or partner','Adult child','Case manager'],
+
+  /* Une liste vide : le champ n'a que le bouton « Other ». */
+  rien: [],
+
+  relationsContact: ['Spouse or partner','Parent','Son or daughter',
+    'Brother or sister','Grandparent','Aunt or uncle','Cousin','Friend',
+    'Legal Guardian','Foster Parent','Social Worker'],
+
+  /* « Signing as » etait le dernier menu deroulant natif de la page, juste
+     au-dessus de la signature : le pire endroit pour un controle qui ne
+     ressemble a rien d'autre du formulaire. */
+  signataire: ['Self','Legal guardian','Foster parent','Social worker',
+    'Authorized representative']
+};
+
+/* Les libelles affiches quand la valeur enregistree n'est pas celle qu'on
+   montre. Le document imprime recoit la valeur, le patient lit le libelle. */
+var ETIQUETTES = { 'Self': 'Myself' };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Les reponses toutes faites
+   ───────────────────────────────────────────────────────────────────────────
+   Plus aucune zone de texte a l'ecran. Chaque question ouverte devient une
+   rangee de puces, et un bouton « Other » ouvre une petite boite pour ce qui
+   n'y figure pas. Ecrire coute vingt a quarante secondes ; toucher en coute
+   deux, et le patient qui lit une liste se souvient de choses qu'il n'aurait
+   pas ecrites.
+
+   Une dizaine d'options par liste : au-dela, la liste devient un mur qu'il
+   faut lire en entier, et le raccourci se retourne contre lui.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var LISTES_MULTIPLES = {
+  allergies: ['Penicillin','Sulfa drugs','Aspirin or NSAIDs','Codeine','Latex','Peanuts',
+    'Tree nuts','Shellfish','Eggs','Dairy','Pollen','Dust','Bee stings','Iodine'],
+
+  pathologies: ['High blood pressure','Diabetes','Asthma','Thyroid condition','Heart disease',
+    'High cholesterol','Migraines','Seizures','Chronic pain','Arthritis','Acid reflux',
+    'Sleep apnea','Anaemia','Kidney disease','COPD','Cancer'],
+
+  medicaments: ['Sertraline (Zoloft)','Fluoxetine (Prozac)','Escitalopram (Lexapro)',
+    'Citalopram (Celexa)','Bupropion (Wellbutrin)','Duloxetine (Cymbalta)',
+    'Venlafaxine (Effexor)','Trazodone','Buspirone','Hydroxyzine','Gabapentin',
+    'Lamotrigine (Lamictal)','Lithium','Aripiprazole (Abilify)','Quetiapine (Seroquel)',
+    'Risperidone (Risperdal)','Prazosin','Adderall','Vyvanse','Concerta','Clonazepam',
+    'Alprazolam (Xanax)'],
+
+  sommeil: ['I cannot fall asleep','I wake up during the night','I wake up too early',
+    'Nightmares','I sleep too much','Racing thoughts at night','I snore or stop breathing',
+    'I am tired all day'],
+
+  appetit: ['I eat much less than usual','I eat much more than usual','I skip meals',
+    'I eat late at night','I have lost weight','I have gained weight',
+    'Food does not appeal to me','I eat when I am stressed'],
+
+  santePhysique: ['Headaches','Back pain','Stomach trouble','Fatigue','Dizziness',
+    'Shortness of breath','Chest tightness','Joint pain','Muscle tension','Nausea'],
+
+  parents: ['Mother','Father','Sister','Brother','Grandmother','Grandfather',
+    'Aunt','Uncle','Cousin','Child','More than one'],
+
+  douleur: ['Back','Neck and shoulders','Head','Joints','Stomach','Legs',
+    'All over','Old injury','Nerve pain','Since surgery'],
+
+  evenements: ['A death in the family','A separation or divorce','Losing my job',
+    'Money trouble','Moving house','A serious illness','Violence or an assault',
+    'A new baby','Someone close is ill','Trouble with the law','Nothing recently'],
+
+  travail: ['I like my work','Too many hours','My manager is difficult',
+    'The pay is not enough','I feel unsafe there','It is physically hard',
+    'I am bored','I like the people','The commute is hard','I may lose it'],
+
+  fratrie: ['One brother','Two brothers','One sister','Two sisters',
+    'A brother and a sister','Three or more','I am an only child',
+    'Half-brothers or half-sisters','Step-brothers or step-sisters'],
+
+  forces: ['Hard-working','Loyal','A good listener','Patient','Honest',
+    'Creative','Resilient','Caring','Funny','Organized','Determined','Independent'],
+
+  faiblesses: ['I overthink things','I procrastinate','I have trouble saying no',
+    'I am impatient','I am hard on myself','I avoid conflict',
+    'I have trouble trusting people','I isolate myself','I get angry quickly',
+    'I am a perfectionist'],
+
+  objectifs: ['Manage my anxiety','Cope with depression','Sleep better',
+    'Handle stress better','Improve my relationships','Work through grief',
+    'Build my self-esteem','Manage my anger','Heal from the past','Stay sober',
+    'Set boundaries','Feel like myself again']
+};
+
+/* Les notes de un a dix, en puces plutot qu'en curseur : viser une valeur sur
+   une glissiere avec le pouce est un jeu d'adresse, pas une reponse. */
+var NOTES_1_10 = ['1','2','3','4','5','6','7','8','9','10'];
+
+function surligner(texte, saisie){
+  if (!saisie) return echapper(texte);
+  var i = texte.toLowerCase().indexOf(saisie.toLowerCase());
+  if (i === -1) return echapper(texte);
+  return echapper(texte.slice(0, i)) + '<b>' + echapper(texte.slice(i, i + saisie.length))
+       + '</b>' + echapper(texte.slice(i + saisie.length));
+}
+
+/* Jusqu'a onze : des chips. Un seul choix, et le champ garde sa valeur. */
+function poserChipsListe(el, liste){
+  var g = document.createElement('div');
+  g.className = 'chips liste-chips';
+  liste.forEach(function(v){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.dataset.v = v;
+    b.textContent = ETIQUETTES[v] || v;
+    g.appendChild(b);
+  });
+  /* Une liste fermee (« Signing as ») n'a pas d'« Other » : toutes les
+     reponses possibles y sont deja, et en ouvrir une de plus ne ferait
+     qu'inviter du texte libre dans un champ juridique. */
+  var ferme = el.hasAttribute('data-sans-autre');
+  if (!ferme){
+    var autre = document.createElement('button');
+    autre.type = 'button'; autre.className = 'chip'; autre.dataset.v = ''; autre.textContent = 'Other';
+    g.appendChild(autre);
+  }
+
+  g.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    $$('button', g).forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    ressaut(b);
+    el.value = b.dataset.v;
+    donnees[el.id] = el.value;
+    poser(el.id, '');
+    /* « Other » ne mene nulle part si on ne rend pas la main au clavier. */
+    if (!ferme){
+      el.hidden = !!b.dataset.v;
+      if (!b.dataset.v) el.focus();
+    }
+    sauverPlusTard();
+  });
+  el.parentNode.insertBefore(g, el);
+  el.hidden = true;
+  el.dataset.chipsListe = '1';
+
+  var def = el.dataset.defaut;
+  if (def && !el.value){
+    var bd = g.querySelector('[data-v="' + def + '"]');
+    if (bd){ bd.classList.add('on'); el.value = def; donnees[el.id] = def; }
+  }
+}
+
+/* Au-dela de onze : une liste filtree par ce que le patient tape. */
+function poserCombo(el, liste){
+  var boite = document.createElement('div');
+  boite.className = 'combo';
+  el.parentNode.insertBefore(boite, el);
+  boite.appendChild(el);
+  var panneau = document.createElement('div');
+  panneau.className = 'combo-liste';
+  boite.appendChild(panneau);
+  if (!el.placeholder) el.placeholder = 'Start typing, or pick from the list';
+
+  function peindre(){
+    var saisie = (el.value || '').trim();
+    var bas = saisie.toLowerCase();
+    /* Ce qui commence par la saisie d'abord, ce qui la contient ensuite :
+       taper « bal » doit donner Baltimore, pas Annapolis Junction. */
+    var debut = [], dedans = [];
+    liste.forEach(function(v){
+      var i = v.toLowerCase().indexOf(bas);
+      if (i === 0) debut.push(v); else if (i > 0) dedans.push(v);
+    });
+    var trouve = debut.concat(dedans).slice(0, 60);
+    panneau.innerHTML = '';
+    if (!trouve.length){
+      var vide = document.createElement('div');
+      vide.className = 'combo-vide';
+      vide.textContent = saisie
+        ? 'Nothing matches. What you typed will be used as it is.'
+        : 'Start typing.';
+      panneau.appendChild(vide);
+      return;
+    }
+    trouve.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'combo-item'; b.dataset.v = v;
+      b.innerHTML = surligner(v, saisie);
+      panneau.appendChild(b);
+    });
+  }
+
+  function ouvrir(){ peindre(); boite.classList.add('on'); }
+  function fermer(){ boite.classList.remove('on'); }
+
+  el.addEventListener('focus', ouvrir);
+  el.addEventListener('input', function(){ ouvrir(); });
+  panneau.addEventListener('mousedown', function(e){ e.preventDefault(); });
+  panneau.addEventListener('click', function(e){
+    var b = e.target.closest('.combo-item'); if (!b) return;
+    el.value = b.dataset.v;
+    donnees[el.id] = el.value;
+    poser(el.id, '');
+    lierVilleEtat(el);
+    fermer();
+    sauverPlusTard();
+  });
+  el.addEventListener('blur', function(){ setTimeout(fermer, 120); });
+  el.addEventListener('keydown', function(e){ if (e.key === 'Escape') fermer(); });
+  el.dataset.combo = '1';
+}
+
+function poserListes(){
+  /* UNIQUEMENT les champs de saisie. Les rangees de puces portent elles
+     aussi `data-liste`, pour nommer leur catalogue, et ce moteur-la les
+     prenait pour des champs a decorer : il cachait la rangee entiere et
+     ecrivait la reponse sous la cle du conteneur au lieu de celle du champ.
+     Le patient voyait sa puce devenir bleue, et le formulaire lui repondait
+     que la question etait sans reponse. Trouve le 2026-09-07 sur le lien de
+     parente du contact d'urgence. */
+  $$('input[data-liste]').forEach(function(el){
+    var liste = LISTES[el.dataset.liste];
+    if (!liste || !liste.length) return;
+    if (liste.length <= SEUIL_CHIPS) poserChipsListe(el, liste);
+    else poserCombo(el, liste);
+  });
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Chips, et « Other » quand rien ne convient
+   ───────────────────────────────────────────────────────────────────────────
+   Un champ se declare ainsi, et le moteur fait le reste :
+
+     <div class="chips rep" data-rep="allergies" data-liste="allergies"
+          data-multi data-aucun="None"></div>
+     <input type="hidden" id="allergies">
+
+   La valeur part dans l'input cache, en clair, separee par des virgules : ni
+   `composer()` ni les documents n'ont a savoir que la saisie a change de
+   forme. Le texte tape dans « Other » s'y ajoute comme le reste.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function valeursDe(cible){
+  var v = (cible.value || '').trim();
+  return v ? v.split(/,\s*/).filter(Boolean) : [];
+}
+function ecrireValeurs(cible, liste){
+  cible.value = liste.join(', ');
+  donnees[cible.id] = cible.value;
+  poser(cible.id, '');
+  sauverPlusTard();
+}
+
+function peindreEtatChips(z, cible){
+  var vals = valeursDe(cible);
+  var connues = [];
+  $$('button[data-v]', z).forEach(function(b){
+    var on = vals.indexOf(b.dataset.v) !== -1;
+    b.classList.toggle('on', on);
+    connues.push(b.dataset.v);
+  });
+  /* Ce que le patient a ecrit lui-meme s'affiche comme une puce a part,
+     qu'on peut retirer d'un geste. Sinon il ne saurait pas qu'il l'a dit. */
+  $$('.chip-libre', z).forEach(function(e){ e.remove(); });
+  var btnAutre = z.querySelector('.chip-autre');
+  vals.forEach(function(v){
+    if (connues.indexOf(v) !== -1) return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip on chip-libre';
+    b.innerHTML = echapper(v) + ' <span aria-hidden="true">\u00d7</span>';
+    b.title = 'Remove';
+    b.addEventListener('click', function(){
+      ecrireValeurs(cible, valeursDe(cible).filter(function(x){ return x !== v; }));
+      peindreEtatChips(z, cible);
+    });
+    z.insertBefore(b, btnAutre);
+  });
+}
+
+function poserChampsChips(){
+  $$('[data-rep]').forEach(poserUnChampChips);
+}
+
+/* Equipe une seule zone. Les precisions de la grille familiale naissent
+   apres coup, quand le patient coche une pathologie. */
+function poserUnChampChips(z){
+    if (z.dataset.pose) return;
+    z.dataset.pose = '1';
+    var cible = $(z.dataset.rep);
+    if (!cible) return;
+    var liste = (z.dataset.liste === 'notes' ? NOTES_1_10
+               : LISTES_MULTIPLES[z.dataset.liste] || LISTES[z.dataset.liste] || []);
+    var multi = z.hasAttribute('data-multi');
+
+    if (z.dataset.aucun){
+      var bn = document.createElement('button');
+      bn.type = 'button'; bn.className = 'chip aucun'; bn.dataset.v = z.dataset.aucun;
+      bn.textContent = z.dataset.aucun;
+      z.appendChild(bn);
+    }
+    liste.forEach(function(v){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.dataset.v = v; b.textContent = v;
+      z.appendChild(b);
+    });
+
+    var autre = document.createElement('button');
+    autre.type = 'button'; autre.className = 'chip chip-autre';
+    autre.textContent = z.dataset.autre || 'Other\u2026';
+    z.appendChild(autre);
+
+    z.addEventListener('click', function(e){
+      var b = e.target.closest('button');
+      if (!b || b.classList.contains('chip-libre')) return;
+      if (b === autre){ ouvrirAutre(z, cible); return; }
+      var v = b.dataset.v, vals = valeursDe(cible);
+      var i = vals.indexOf(v);
+      if (!multi) vals = (i === -1) ? [v] : [];
+      else if (i === -1){
+        /* « None » et une reponse se contredisent. */
+        if (z.dataset.aucun && v === z.dataset.aucun) vals = [v];
+        else vals = vals.filter(function(x){ return x !== z.dataset.aucun; }).concat([v]);
+      }
+      else vals.splice(i, 1);
+      ecrireValeurs(cible, vals);
+      peindreEtatChips(z, cible);
+      if (b.classList.contains('on')) ressaut(b);
+      appliquerConditionnels();
+    });
+    peindreEtatChips(z, cible);
+}
+
+/* La petite boite pour ce qui n'est pas dans la liste. */
+var autreZone = null, autreCible = null;
+function ouvrirAutre(z, cible){
+  autreZone = z; autreCible = cible;
+  var etiq = z.closest('.champ');
+  etiq = etiq ? etiq.querySelector('.etiq, label') : null;
+  $('autreTitre').textContent = etiq ? etiq.textContent.replace('*','').trim() : 'Anything else';
+  $('autreTexte').value = '';
+  $('modaleAutre').classList.add('on');
+  setTimeout(function(){ $('autreTexte').focus(); }, 60);
+}
+function validerAutre(){
+  var t = ($('autreTexte').value || '').trim();
+  if (t && autreCible){
+    var multi = autreZone.hasAttribute('data-multi');
+    var vals = multi ? valeursDe(autreCible) : [];
+    vals = vals.filter(function(x){ return x !== autreZone.dataset.aucun; });
+    if (vals.indexOf(t) === -1) vals.push(t);
+    ecrireValeurs(autreCible, vals);
+    peindreEtatChips(autreZone, autreCible);
+    appliquerConditionnels();
+  }
+  fermerAutre();
+}
+function fermerAutre(){
+  $('modaleAutre').classList.remove('on');
+  autreZone = null; autreCible = null;
+}
+
+/* ── Poser le formulaire sur l'ecran d'accueil ─────────────────────────────
+   Installe, il s'ouvre en plein ecran, sans barre d'adresse, et il marche
+   hors ligne : sur une tablette d'accueil c'est la difference entre une page
+   web et l'outil du cabinet.
+
+   Chrome previent qu'il peut installer, on lui repond. iOS ne previent
+   jamais : on lui dit seulement ou est le bouton, et seulement s'il n'est
+   pas deja installe. */
+var invitationInstall = null;
+
+function estInstalle(){
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+}
+function installRefuse(){
+  try { return localStorage.getItem('aes_install_non') === '1'; } catch(e){ return false; }
+}
+
+function brancherInstallation(){
+  var b = $('banniereInstall');
+  if (estInstalle() || installRefuse()) return;
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    invitationInstall = e;
+    $('installTexte').innerHTML = '<b>Install this form</b> on this device. It opens full screen and works without wifi.';
+    $('btnInstaller').hidden = false;
+    b.hidden = false;
+  });
+
+  /* iOS : pas d'evenement, pas de bouton a offrir. On indique le chemin. */
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (ios){
+    setTimeout(function(){
+      if (!b.hidden || estInstalle()) return;
+      $('installTexte').innerHTML = '<b>Add this form to your home screen:</b> tap Share, then \u201cAdd to Home Screen\u201d.';
+      $('btnInstaller').hidden = true;
+      b.hidden = false;
+    }, 2500);
+  }
+
+  $('btnInstaller').addEventListener('click', function(){
+    if (!invitationInstall) return;
+    invitationInstall.prompt();
+    invitationInstall.userChoice.then(function(){ invitationInstall = null; b.hidden = true; });
+  });
+  $('btnPasInstaller').addEventListener('click', function(){
+    b.hidden = true;
+    try { localStorage.setItem('aes_install_non', '1'); } catch(e){}
+  });
+}
+
+function demarrer(){
+  brancherChoix();
+  peindrePhotos(); peindreFamille(); peindreEchange(); peindreDureeEchange(); peindreParties(); peindreLegal();
+  /* L'ordre compte : les chips de suggestion se posent avant le bouton
+     « None », qui se pose avant la zone de texte. */
+  poserListes(); poserChampsChips();
+  brancherCopies();
+  couperAutofill();
+
+  padClient = fairePad('padClient','cvClient');
+  padTuteur = fairePad('padTuteur','cvTuteur');
+  padTemoin = fairePad('padTemoin','cvTemoin');
+  padStaff  = fairePad('padStaff','cvStaff');
+  padPrp    = fairePad('padPrp','cvPrp');
+  $('btnEffacerClient').addEventListener('click', function(){ padClient.effacer(); });
+  $('btnEffacerTuteur').addEventListener('click', function(){ padTuteur.effacer(); });
+  $('btnEffacerTemoin').addEventListener('click', function(){ padTemoin.effacer(); });
+  $('btnEffacerStaff').addEventListener('click', function(){ padStaff.effacer(); });
+  $('btnEffacerPrp').addEventListener('click', function(){ padPrp.effacer(); });
+
+  document.addEventListener('input', function(e){
+    var el = e.target;
+    if (!el.id) return;
+    if (el.id === 'date_of_birth' || el.id === 'screening_date'
+        || el.id === 'screen_q3_notified_date' || el.id === 'screen_q5_enrollment'){
+      masqueDate(el);
+    }
+    if (/phone|_am$|_pm$|^pcp_phone$|fax/.test(el.id) && el.type === 'tel') masqueTel(el);
+    if (el.id === 'ssn') masqueSsn(el);
+    if (el.id === 'date_of_birth'){ majAge(); majTuteur(); appliquerConditionnels(); }
+    if (el.id === 'ec1_phone_am' || el.id === 'exercise_frequency') appliquerConditionnels();
+    if (/_city$/.test(el.id)) lierVilleEtat(el);
+    if (el.id === 'relationship_rating') majRelation();
+    if (el.id === 'address_state' || el.id === 'ec1_state'){
+      el.value = el.value.toUpperCase();
+    }
+    donnees[el.id] = el.value;
+    poser(el.id, '');
+    sauverPlusTard();
+  });
+
+  /* L'accueil annoncait 15 minutes pendant que le compteur en affichait 18 :
+     deux chiffres inventes separement finissent toujours par diverger. Il n'y
+     a plus qu'une source, la liste ETAPES. */
+  var totalMinutes = parcours().reduce(function(a, e){ return a + e.min; }, 0);
+  $('dureeAnnoncee').textContent = 'about ' + Math.round(totalMinutes) + ' minutes';
+
+  $('btnDemarrer').addEventListener('click', function(){
+    demarre = true;
+    /* L'installation regarde le personnel, pas le patient au milieu de son
+       dossier : la banniere disparait des que le remplissage commence. */
+    $('banniereInstall').hidden = true;
+    aller(1);
+  });
+  $('btnSuiv').addEventListener('click', function(){
+    if (!valider(etapeId)) return;
+    etapeSuivante();
+  });
+  $('btnPrec').addEventListener('click', function(){
+    etapePrecedente();
+  });
+  $('btnTelecharger').addEventListener('click', function(){
+    if (docsProduits) garder(docsProduits.pdf_packet, docsProduits.pdf_packet_nom);
+  });
+  $('btnFamilleAucun').addEventListener('click', function(){
+    FAMILLE.forEach(function(f){ donnees[f[0]] = 'No'; });
+    peindreFamille(); sauverPlusTard();
+  });
+  $('btnAjouterPartie').addEventListener('click', function(){
+    var l = JSON.parse(donnees.screening_parties_json || '[]');
+    l.push({ name:'', relationship:'' });
+    donnees.screening_parties_json = JSON.stringify(l);
+    peindreParties();
+  });
+
+  /* Sur la tablette du cabinet, la reprise est un danger, pas un service :
+     elle rouvrait le dossier entier du patient precedent, SSN compris, a qui
+     prenait l'appareil. On efface plutot ce qui trainerait encore. */
+  if (CONFIG.KIOSQUE){
+    effacerSauvegarde();
+    $('motSauvegarde').textContent = 'Your answers stay on this tablet until you are done, '
+      + 'then it clears itself.';
+  }
+  var sauve = CONFIG.KIOSQUE ? null : lireSauvegarde();
+  if (sauve){
+    appliquer(sauve);
+    var jours = Math.floor((Date.now() - sauve.quand) / 86400000);
+    $('repriseQuand').textContent = jours < 1 ? ' today' : jours === 1 ? ' yesterday' : ' ' + jours + ' days ago';
+    $('reprise').hidden = false;
+    $('btnDemarrer').textContent = 'Start a new form';
+    $('btnReprendre').addEventListener('click', function(){ demarre = true; aller(etapeId); });
+    $('btnRepartir').addEventListener('click', function(){
+      effacerSauvegarde(); location.reload();
+    });
+  }
+
+  peindreFile();
+  window.addEventListener('online', viderFile);
+  setInterval(viderFile, CONFIG.RETENTE);
+  window.addEventListener('resize', dimensionnerPads);
+  /* Les photos ne tiennent pas dans localStorage : on previent plutot que de
+     laisser le patient croire qu'elles sont gardees. */
+  window.addEventListener('beforeunload', function(e){
+    /* onQuitte : le nettoyage d'inactivite ne doit pas ouvrir une boite de
+       dialogue que personne n'est la pour fermer. */
+    if (!onQuitte && demarre && Object.keys(photos).length && $('fini').hidden){
+      e.preventDefault(); e.returnValue = '';
+    }
+  });
+
+  /* Inactivite : le moindre geste, y compris un simple defilement pendant la
+     lecture des documents legaux, remet le compteur a zero. */
+  /* Le defilement se produit dans <main>, pas sur la fenetre : ecouter la
+     fenetre seule laisserait le compteur d'inactivite courir pendant qu'un
+     patient lit tranquillement les textes juridiques. */
+  ['pointerdown','keydown','touchstart'].forEach(function(ev){
+    window.addEventListener(ev, function(){
+      if ($('modaleInactif').classList.contains('on')) return;
+      armerInactivite();
+    }, { passive: true });
+  });
+  document.querySelector('main').addEventListener('scroll', function(){
+    if ($('modaleInactif').classList.contains('on')) return;
+    armerInactivite();
+  }, { passive: true });
+  $('btnJeSuisLa').addEventListener('click', annulerPreavis);
+  $('autreOk').addEventListener('click', validerAutre);
+  $('autreAnnuler').addEventListener('click', fermerAutre);
+  $('autreTexte').addEventListener('keydown', function(e){ if (e.key === 'Enter') validerAutre(); });
+  $('btnAjouterContact').addEventListener('click', function(){
+    $('carteEc2').hidden = false;
+    this.hidden = true;
+    $('ec2_name').focus();
+  });
+  $('rappelPartageLien').addEventListener('click', function(){ aller('et_partage'); });
+  $('btnTemoin').addEventListener('click', function(){
+    $('carteTemoin').hidden = false;
+    this.hidden = true;
+    dimensionnerPads();
+    $('witness_name').focus();
+  });
+  brancherInstallation();
+  $('btnRendre').addEventListener('click', rendreLaTablette);
+  $('btnStaff').addEventListener('click', function(){
+    modeStaff = true;
+    aller('et_staff');
+  });
+  armerInactivite();
+
+  if ('serviceWorker' in navigator){
+    navigator.serviceWorker.register('service-worker.js').catch(function(){});
+  }
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
+else demarrer();
+})();
+</script>
+<div class="modale" id="modaleInactif">
+  <p style="font:600 19px/1.4 var(--sans);color:#fff;max-width:420px">Are you still filling this out?</p>
+  <p>For the next person's privacy, this tablet clears itself in <b id="compteInactif">30</b> seconds.</p>
+  <button type="button" class="mini plein" id="btnJeSuisLa" style="margin-top:6px">I am still here</button>
+</div>
+</body>
+</html>
