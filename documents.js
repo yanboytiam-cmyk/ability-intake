@@ -65,10 +65,48 @@
     pied: CABINET.nom
   };
 
+  /* Le logo du cabinet, celui qui doit figurer en tete de chacun des onze
+     documents que le patient signe.
+
+     Il n'y figurait pas. Le code exigeait une image deja encodee en base64, et
+     rendait `null` sans rien dire quand elle ne l'etait pas. Or la page sert
+     son logo par un fichier, `assets/ability-logo.png` : en production, la
+     condition n'a jamais ete vraie. Le banc d'essai, lui, encodait le fichier
+     avant de le passer au code, donc il validait une situation qui n'existait
+     nulle part.
+
+     On accepte desormais les deux formes. Une image servie par fichier est
+     redessinee sur une toile pour en tirer son encodage ; la page et le PDF
+     sont sur la meme origine, la toile n'est donc pas verrouillee. */
+  var logoRetenu = null, logoDejaCherche = false;
+
+  function chargerLogoAbility() {
+    if (logoDejaCherche) return Promise.resolve(logoRetenu);
+    logoDejaCherche = true;
+    return new Promise(function (resolve) {
+      if (typeof document === 'undefined') { resolve(null); return; }
+      var img = document.querySelector('.intro-logo, .header-logo');
+      var src = (img && img.src) ? String(img.src) : '';
+      if (!src) { resolve(null); return; }
+      if (src.indexOf('data:image') === 0) { logoRetenu = src; resolve(src); return; }
+      var chargeur = new Image();
+      chargeur.onload = function () {
+        try {
+          var c = document.createElement('canvas');
+          c.width = chargeur.width || 1;
+          c.height = chargeur.height || 1;
+          c.getContext('2d').drawImage(chargeur, 0, 0);
+          logoRetenu = c.toDataURL('image/png');
+        } catch (e) { logoRetenu = null; }
+        resolve(logoRetenu);
+      };
+      chargeur.onerror = function () { resolve(null); };
+      chargeur.src = src;
+    });
+  }
+
   function logoAbility() {
-    if (typeof document === 'undefined') return null;
-    var img = document.querySelector('.intro-logo, .header-logo');
-    return (img && img.src && img.src.indexOf('data:image') === 0) ? img.src : null;
+    return logoRetenu;
   }
 
   function nonVide(v) {
@@ -1497,6 +1535,10 @@
   ];
 
   window.construireDocumentsAbility = async function (d) {
+    /* Le logo est cherche une fois, avant la premiere page : les briques de
+       mise en page le lisent ensuite sans attendre. */
+    await chargerLogoAbility();
+
     /* Une photo de telephone pese plusieurs megaoctets. Elle est reduite une
        seule fois, puis servie aux deux exemplaires du questionnaire. */
     var images = {
