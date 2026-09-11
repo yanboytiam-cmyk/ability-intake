@@ -1,26 +1,46 @@
 /* ══════════════════════════════════════════════════════════════════════════
    Ability and Empowerment Services — fabrication du dossier d'admission
    ──────────────────────────────────────────────────────────────────────────
-   Les DIX documents du dossier papier sont produits ici, dans le navigateur,
-   deja signes, au moment ou le patient valide le formulaire :
+   Le dossier papier du cabinet, rempli et signe, en UN SEUL fichier, produit
+   dans le navigateur au moment ou le patient valide le formulaire.
 
-     1. PRP Consent for Treatment
-     2. OMHC Consent for Treatment
-     3. Client Intake Questionnaire
-     4. Emergency Contact and Primary Care Physician Information
-     5. HIPAA Patient/Client Consent Form
-     6. Informed Consent for Telehealth and Telephonic Services
-     7. Authorization to Exchange Information
-     8. Acknowledgement of Receipt — Persons Served Handbook
-     9. Community Supports and Family of Origin
-    10. PRP Initial Face-to-Face Screening        (rempli par le personnel)
+   Refait le 2026-09-11 sur le retour de Collins : « le rendu n'est pas
+   conforme au document de depart », et « pour un seul client on a une
+   dizaine de fichiers a l'arrivee au lieu d'un seul ». La version precedente
+   recomposait chaque document dans une mise en page neuve, etiquettes
+   au-dessus des valeurs, encadres, bandeaux de section : 22 pages au lieu de
+   16, des signatures renvoyees seules en haut de la page suivante, et douze
+   fichiers par patient.
 
-   Chaque document est une fonction `contenuXxx(p, d, images)` qui empile des
-   briques sur une page deja ouverte. C'est ce qui permet de les servir deux
-   fois sans les ecrire deux fois : une fois enchainees dans le dossier
-   complet, une fois seules dans leur propre fichier. Le cabinet classe le
-   dossier relie ; les documents qui partent ailleurs (autorisation d echange,
-   fiche du medecin traitant) partent seuls.
+   Trois regles, desormais :
+
+     1. Chaque page du papier a sa page ici, avec les memes elements, dans le
+        meme ordre, sous les memes libelles. Une signature reste sur la page
+        du texte qu'elle signe.
+     2. La mise en page est serree : les reponses s'ecrivent sur la ligne,
+        comme au stylo sur le papier, et non sous leur etiquette.
+     3. Un seul fichier, le dossier complet. Les pieces d'identite ont leur
+        page, a la fin, avec un cadre fixe par image.
+
+   Correspondance avec le PDF fourni par le cabinet :
+
+     PRP Consent for Treatment ........................ page 1
+     OMHC Consent for Treatment ....................... page 2
+     Client Intake Questionnaire ...................... pages 3, 5, 4
+       (le papier range « 3 of 3 » avant « 2 of 3 » ; remises dans l'ordre)
+     PRP Initial Face-to-Face Screening ............... pages 6 et 9
+       (seulement si le personnel l'a rempli ; ses deux moities, separees
+        sur le papier par deux autres documents, tiennent sur une page)
+     Emergency Contact and Primary Care Physician ..... page 7
+     HIPAA Patient/Client Consent Form ................ page 8
+     Informed Consent for Telehealth .................. pages 10, 11, 12
+       (la page 12 ne portait que les signatures : elles closent la 11)
+     Authorization to Exchange Information ............ pages 13, 14
+       (la page 14 ne portait que trois lignes de signature : elles
+        closent la 13)
+     Acknowledge Receipt of Persons Served Handbook ... page 15
+     Community Supports and Family of Origin .......... page 16
+     Identification and Insurance ..................... nouvelle, les photos
 
    Le texte juridique n'est jamais reformule : il est repris mot pour mot du
    dossier papier fourni par le cabinet. Ce que le patient a lu a l'ecran est
@@ -30,54 +50,61 @@
 (function () {
   'use strict';
 
-  /* Les couleurs sont celles du site du cabinet, relevees dans sa feuille de
-     style : le patient qui arrive depuis leur site doit reconnaitre la marque
-     sur le document ou il donne son numero de securite sociale.
+  /* Le bleu et le vert sont ceux du site du cabinet ; le marine et le rose
+     sont ceux du bandeau de titre de son dossier papier, releves sur le PDF.
 
-     Une seule liberte prise sur la charte : l'accent est le vert fonce
-     (#4E9E2E) et non le vert vif du logo (#80E050). L'accent porte du texte
-     de 7 a 9 points sur fond blanc ; le vert vif y devient illisible, et
-     disparait franchement a la photocopie. Un dossier medical se photocopie. */
-  var BLEU = [48, 96, 176];      /* #3060B0 — le bleu du logo */
-  var BLEU_SOMBRE = [39, 79, 146]; /* #274F92 */
-  var VERT = [78, 158, 46];      /* #4E9E2E — le vert du logo, assombri pour rester lisible */
-  var GRIS = [84, 96, 74];       /* #54604A */
-  var ENCRE = [14, 19, 13];      /* #0E130D */
-  var LIGNE = [221, 208, 174];   /* #DDD0AE */
-  var DOUX = [244, 237, 220];    /* #F4EDDC — le creme du site */
+     Les reponses sont a l'encre bleue, le formulaire en noir. Sur le papier,
+     c'est la difference entre l'imprime et le stylo, et c'est elle qui permet
+     de relire un dossier en diagonale. */
+  var MARINE = [31, 56, 100];     /* #1F3864 — le bandeau de titre du papier */
+  var ROSE = [192, 57, 105];      /* l'etiquette PRP / OMHC du papier */
+  var GRIS = [44, 48, 56];        /* les libelles, presque noirs comme au papier */
+  var ENCRE = [20, 22, 26];       /* le texte imprime */
+  var STYLO = [22, 46, 120];      /* les reponses du patient */
+  var TRAIT = [120, 126, 136];    /* les lignes a remplir */
+  var BARRE = [226, 230, 236];    /* les barres de section du questionnaire */
+  var CADRE = [160, 166, 176];    /* bordures des tableaux et des cadres */
+  var PALE = [140, 146, 156];     /* « Not provided », pied de page */
+  var BLANC = [255, 255, 255];
 
   var CABINET = {
     nom: 'Ability and Empowerment Services, INC',
-    adresse: '1 N Charles Street, Baltimore, MD 21201',
-    contact: '(443) 438-5538  ·  online@abilityempowermenths.com',
-    site: 'www.abilityempowermenths.com'
+    adresse: '1 N Charles Street, Baltimore, MD, 21201',
+    contact: '(443) 438-5538  ·  online@abilityempowermenths.com'
   };
 
-  var L = 54, LARG = 612, HAUT = 792;
-  var UTILE = LARG - L * 2;
+  /* Format lettre, en points. BAS est la derniere ligne ou le contenu peut
+     descendre : en dessous vit le pied de page. */
+  var LARG = 612, HAUT = 792, L = 42;
+  var R = LARG - L, UTILE = R - L;
+  var BAS = HAUT - 40;
+  var Y_SUITE = 72;
 
-  /* Un theme = les sept couleurs du gabarit plus la ligne de pied de page.
-     Les briques de mise en page ne connaissent que ca. */
-  var THEME_ABILITY = {
-    style: 'ability',
-    primaire: BLEU, second: BLEU_SOMBRE, accent: VERT,
-    gris: GRIS, encre: ENCRE, ligne: LIGNE, doux: DOUX,
-    pied: CABINET.nom
-  };
+  /* Le corps du texte juridique, les libelles et les reponses. Une reponse
+     se resserre jusqu'a T_REP_MIN avant de passer a la ligne.
 
-  /* Le logo du cabinet, celui qui doit figurer en tete de chacun des onze
-     documents que le patient signe.
+     Ces tailles sont celles d'un document dense. Chaque document les agrandit
+     de son facteur `echelle` : un consentement qui tient sur un tiers de page
+     laissait un grand blanc sous sa signature, la ou le papier remplit la
+     feuille. Le facteur est choisi pour le pire cas mesure (un mineur, son
+     tuteur et toutes ses lignes) ; le banc d'essai refuse tout debordement. */
+  var F = 1, T_TEXTE, IL, T_ETIQ, T_REP, T_REP_MIN, H_RANG, H_SIG;
 
-     Il n'y figurait pas. Le code exigeait une image deja encodee en base64, et
-     rendait `null` sans rien dire quand elle ne l'etait pas. Or la page sert
-     son logo par un fichier, `assets/ability-logo.png` : en production, la
-     condition n'a jamais ete vraie. Le banc d'essai, lui, encodait le fichier
-     avant de le passer au code, donc il validait une situation qui n'existait
-     nulle part.
+  function appliquerEchelle(f) {
+    F = f || 1;
+    T_TEXTE = 8.7 * F; IL = 10.6 * F;
+    T_ETIQ = 8.6 * F;
+    T_REP = 9.2 * F; T_REP_MIN = 6.9;
+    H_RANG = 16.5 * F; H_SIG = 31 + 30 * (F - 1);
+  }
+  appliquerEchelle(1);
 
-     On accepte desormais les deux formes. Une image servie par fichier est
-     redessinee sur une toile pour en tirer son encodage ; la page et le PDF
-     sont sur la meme origine, la toile n'est donc pas verrouillee. */
+  /* Le logo du cabinet, en tete de chaque page comme sur le papier.
+
+     La page le sert par un fichier, `assets/ability-logo.png`. Une image
+     servie par fichier est redessinee sur une toile pour en tirer son
+     encodage ; la page et le PDF sont sur la meme origine, la toile n'est
+     donc pas verrouillee. Un logo deja encode passe tel quel. */
   var logoRetenu = null, logoDejaCherche = false;
 
   function chargerLogoAbility() {
@@ -144,470 +171,673 @@
     });
   }
 
+  /* « Name » devient « Name: », comme sur le papier. Un libelle qui porte
+     deja sa ponctuation la garde : « Telephone # », « May we leave a
+     message? », « I, », « Address: Street ». */
+  function libelle(t) {
+    t = nonVide(t);
+    if (!t || t === 'I' || /[?:#,.]$/.test(t) || t.indexOf(':') >= 0) return t;
+    return t + ':';
+  }
+
   /* ────────────────────────────────────────────────────────────────────────
-     Le gabarit : bandeau, pied de page, et les briques de mise en page.
-     Les dix documents ne font qu'empiler ces briques.
+     Le gabarit : en-tete, bandeau de titre, pied de page, et les briques
+     de mise en page. Les onze documents ne font qu'empiler ces briques.
+
+     Convention : `etat.y` est le haut de l'espace libre. Chaque brique
+     reserve sa hauteur avec place(), dessine, puis descend `etat.y`.
      ──────────────────────────────────────────────────────────────────────── */
-  function nouvellePage(titre, sousTitre, theme) {
+  function nouveauDossier() {
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({ unit: 'pt', format: 'letter', compress: true });
-    var etat = { y: 0 };
     var logo = logoAbility();
+    var etat = { y: Y_SUITE, cle: '', vierge: true, marge: 0 };
 
-    /* Les briques ci-dessous ne connaissent que ces sept noms. En les
-       redeclarant ici on rebadge tout le gabarit d'un seul coup, sans toucher
-       a une seule ligne de contenu. */
-    var T = theme || THEME_ABILITY;
-    var FOREST = T.primaire, SAGE = T.second, GOLD = T.accent;
-    var GREY = T.gris, INK = T.encre, LIGNE = T.ligne, DOUX = T.doux;
+    /* Ce que le banc d'essai relit : ou commence et finit chaque document,
+       sur quelle page tombe chaque signature, et tout debordement. */
+    var reperes = [], signatures = [], debordements = [], remplissage = {};
 
-    function bandeau() {
-      doc.setFillColor(FOREST[0], FOREST[1], FOREST[2]);
-      doc.rect(0, 0, LARG, 6, 'F');
-      doc.setFillColor(GOLD[0], GOLD[1], GOLD[2]);
-      doc.rect(0, 6, LARG, 1.6, 'F');
-      var y = 30, x = L;
+    function page() { return doc.internal.getNumberOfPages(); }
+    function encre(c) { doc.setTextColor(c[0], c[1], c[2]); }
+    function trait(c, w) { doc.setDrawColor(c[0], c[1], c[2]); doc.setLineWidth(w || 0.5); }
+    function fond(c) { doc.setFillColor(c[0], c[1], c[2]); }
+    function police(style, taille, c) {
+      doc.setFont('helvetica', style || 'normal');
+      doc.setFontSize(taille);
+      encre(c || ENCRE);
+    }
+    function gauche() { return L + etat.marge; }
+    function droite() { return R - etat.marge; }
+    function noter() {
+      var p = page();
+      remplissage[p] = Math.max(remplissage[p] || 0, etat.y);
+    }
+
+    /* L'en-tete du papier, repris sur chaque page comme sur le papier : le
+       logo a gauche, la raison sociale centree, un filet. */
+    function enTete() {
+      var x = L + 62;
       if (logo) {
-        try { doc.addImage(logo, 'PNG', L, y, 62, 62); x = L + 78; } catch (e) { x = L; }
+        try { doc.addImage(logo, 'PNG', L, 10, 52, 52); } catch (e) { }
       }
-      doc.setFont('times', 'bold'); doc.setFontSize(15);
-      doc.setTextColor(FOREST[0], FOREST[1], FOREST[2]);
-      var lgT = doc.splitTextToSize(titre, LARG - L - x);
-      doc.text(lgT[0], x, y + 18);
-      doc.setFont('times', 'normal'); doc.setFontSize(10);
-      doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-      doc.text(doc.splitTextToSize(sousTitre || '', LARG - L - x)[0] || '', x, y + 33);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.2);
-      doc.setTextColor(FOREST[0], FOREST[1], FOREST[2]);
-      doc.text(CABINET.nom, x, y + 50);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.6);
-      doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-      doc.text(CABINET.adresse, x, y + 60);
-      doc.text(CABINET.contact, x, y + 70);
-      etat.y = 112;
-      doc.setDrawColor(GOLD[0], GOLD[1], GOLD[2]); doc.setLineWidth(0.8);
-      doc.line(L, etat.y, LARG - L, etat.y);
-      etat.y += 22;
+      var cx = (x + R) / 2;
+      doc.setFont('times', 'bold'); doc.setFontSize(13.5); encre(ENCRE);
+      doc.text(CABINET.nom, cx, 29, { align: 'center' });
+      doc.setFont('times', 'normal'); doc.setFontSize(9); encre(GRIS);
+      doc.text(CABINET.adresse, cx, 41, { align: 'center' });
+      doc.text(CABINET.contact, cx, 52, { align: 'center' });
+      trait(ENCRE, 0.6);
+      doc.line(x, 59, R, 59);
+      etat.y = Y_SUITE;
     }
 
-    /* Ouvre le document suivant du dossier relie : nouvelle page, nouveau
-       bandeau, nouveau titre. C'est ce qui permet d'enchainer les dix
-       documents dans un seul fichier sans reecrire leur contenu. */
-    function entete(t, st) {
-      doc.addPage();
-      titre = t; sousTitre = st || '';
-      etat.y = 0;
-      bandeau();
+    /* Le bandeau marine du papier, titre en blanc, et l'etiquette rose du
+       programme quand il y en a une (« PRP », « OMHC »). */
+    function bandeau(titre, etiquette) {
+      var y = 66, h = 16, tT = 10.5, tE = 8.4, lE = 0;
+      fond(MARINE); doc.rect(L, y, UTILE, h, 'F');
+      doc.setFont('times', 'bold');
+      if (etiquette) { doc.setFontSize(tE); lE = doc.getTextWidth(etiquette) + 9; }
+      doc.setFontSize(tT);
+      while (doc.getTextWidth(titre) + lE + 26 > UTILE && tT > 7.5) {
+        tT -= 0.5; doc.setFontSize(tT);
+      }
+      var x = LARG / 2 - (doc.getTextWidth(titre) + (lE ? lE + 6 : 0)) / 2;
+      if (etiquette) {
+        fond(ROSE); doc.rect(x, y + 3, lE, h - 6, 'F');
+        doc.setFontSize(tE); encre(BLANC);
+        doc.text(etiquette, x + 4.5, y + 10.9);
+        x += lE + 6;
+        doc.setFontSize(tT);
+      }
+      encre(BLANC);
+      doc.text(titre, x, y + 11.6);
+      etat.y = y + h + 11;
     }
+
+    function suivre() {
+      if (reperes.length) reperes[reperes.length - 1].fin = page();
+    }
+
+    /* Chaque document commence en haut d'une feuille, comme sur le papier,
+       a la taille de texte qui remplit sa page. */
+    function ouvrir(cle, titre, etiquette, f) {
+      if (!etat.vierge) { noter(); doc.addPage(); }
+      etat.vierge = false;
+      etat.cle = cle;
+      etat.marge = 0;
+      appliquerEchelle(f);
+      enTete();
+      bandeau(titre, etiquette);
+      reperes.push({ cle: cle, titre: titre, debut: page(), fin: page() });
+    }
+
+    /* Le saut de page du papier. Il est voulu : ce qui suit commence en haut
+       de la feuille suivante, a la place qu'il occupe sur le papier. */
+    function saut() {
+      noter();
+      doc.addPage(); enTete(); suivre();
+    }
+
+    /* Le saut que personne n'a voulu : le contenu deborde de sa page. Rien
+       ne se perd, mais il est compte, et le banc d'essai le refuse sur les
+       dossiers de test. Un debordement, c'est une signature qui risque de
+       partir seule en haut de la page suivante, precisement ce que Collins
+       a reproche. */
+    function place(h) {
+      if (etat.y + h <= BAS) return false;
+      debordements.push({ cle: etat.cle, page: page() + 1 });
+      noter();
+      doc.addPage(); enTete(); suivre();
+      return true;
+    }
+
+    function espace(h) { etat.y += h; }
 
     function pied() {
-      var n = doc.internal.getNumberOfPages();
+      noter();
+      var n = page();
       for (var i = 1; i <= n; i++) {
         doc.setPage(i);
-        doc.setDrawColor(LIGNE[0], LIGNE[1], LIGNE[2]); doc.setLineWidth(0.6);
-        doc.line(L, HAUT - 44, LARG - L, HAUT - 44);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2);
-        doc.setTextColor(155, 165, 158);
-        doc.text('Confidential — protected health information.', L, HAUT - 31);
-        doc.text(T.pied + '  ·  Page ' + i + ' of ' + n, LARG - L, HAUT - 31, { align: 'right' });
-      }
-    }
-    function place(h) {
-      if (etat.y + h > HAUT - 62) { doc.addPage(); etat.y = 52; return true; }
-      return false;
-    }
-    function saut() { doc.addPage(); etat.y = 52; }
-
-    /* Bandeau de grande section (A, B, C, D) : il doit se voir au feuilletage. */
-    function section(lettre, titre, chapeau) {
-      place(80);
-      var h = 34;
-      doc.setFillColor(FOREST[0], FOREST[1], FOREST[2]);
-      doc.rect(L, etat.y - 12, UTILE, h, 'F');
-      doc.setFillColor(GOLD[0], GOLD[1], GOLD[2]);
-      doc.rect(L, etat.y - 12, 4, h, 'F');
-      doc.setFont('helvetica', 'bold');
-      if (lettre) {
-        doc.setFontSize(8);
-        doc.setTextColor(GOLD[0], GOLD[1], GOLD[2]);
-        doc.text('SECTION ' + lettre, L + 16, etat.y + 1);
-      }
-      doc.setFontSize(11); doc.setTextColor(255, 255, 255);
-      doc.text(titre.toUpperCase(), L + 16, lettre ? etat.y + 15 : etat.y + 9);
-      etat.y += h + 6;
-      if (chapeau) {
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(8.2);
-        doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-        var lg = doc.splitTextToSize(chapeau, UTILE);
-        for (var i = 0; i < lg.length; i++) { doc.text(lg[i], L, etat.y); etat.y += 11; }
-        etat.y += 6;
+        trait(CADRE, 0.5);
+        doc.line(L, HAUT - 30, R, HAUT - 30);
+        police('normal', 6.8, PALE);
+        doc.text('Confidential — protected health information.', L, HAUT - 20);
+        doc.text(CABINET.nom + '  ·  Page ' + i + ' of ' + n, R, HAUT - 20, { align: 'right' });
       }
     }
 
-    /* `hSuite` : la hauteur de ce qui suit immediatement. Sans elle, un titre
-       pouvait tomber en bas de page et ses images partir a la suivante, ce qui
-       donne un intitule seul au-dessus du vide. Un document medical se relit
-       en diagonale : un titre sans contenu ressemble a une piece manquante. */
-    function titreSection(t, num, hSuite) {
-      place(44 + (hSuite || 0));
-      etat.y += 6;
-      if (num) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.4);
-        doc.setTextColor(GOLD[0], GOLD[1], GOLD[2]);
-        doc.text(String(num), L, etat.y);
-      }
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.4);
-      doc.setTextColor(FOREST[0], FOREST[1], FOREST[2]);
-      doc.text(t.toUpperCase(), num ? L + 26 : L, etat.y);
-      etat.y += 6;
-      doc.setDrawColor(LIGNE[0], LIGNE[1], LIGNE[2]); doc.setLineWidth(0.6);
-      doc.line(L, etat.y, LARG - L, etat.y);
-      etat.y += 14;
-    }
+    /* ─── Le texte ──────────────────────────────────────────────────────── */
 
     function paragraphe(txt, opts) {
       opts = opts || {};
-      doc.setFont('helvetica', opts.gras ? 'bold' : (opts.italique ? 'italic' : 'normal'));
-      doc.setFontSize(opts.taille || 9.2);
-      var c = opts.couleur || INK;
-      doc.setTextColor(c[0], c[1], c[2]);
-      var lignes = doc.splitTextToSize(txt, opts.largeur || UTILE);
-      var il = opts.interligne || 12.5;
+      var style = ((opts.gras ? 'bold' : '') + (opts.italique ? 'italic' : '')) || 'normal';
+      var taille = opts.taille || T_TEXTE, il = opts.interligne || IL;
+      police(style, taille, opts.couleur || ENCRE);
+      var x = gauche() + (opts.retrait || 0);
+      var lignes = doc.splitTextToSize(String(txt), droite() - x);
       for (var i = 0; i < lignes.length; i++) {
-        place(il);
-        doc.text(lignes[i], opts.x || L, etat.y);
+        if (place(il)) police(style, taille, opts.couleur || ENCRE);
+        doc.text(lignes[i], x, etat.y + il * 0.78);
         etat.y += il;
       }
-      etat.y += (opts.apres === undefined ? 8 : opts.apres);
+      etat.y += (opts.apres === undefined ? 3.5 : opts.apres);
+    }
+
+    /* Un intitule en gras, souligne quand le papier le souligne. Il reserve
+       aussi la place de ce qui le suit : un intitule seul en bas de page
+       ressemble a une piece manquante. */
+    function intertitre(t, opts) {
+      opts = opts || {};
+      place(IL + (opts.suite || 18) * F);
+      var taille = (opts.taille || 8.9) * F;
+      police('bold', taille, ENCRE);
+      var x = gauche(), lignes = doc.splitTextToSize(t, droite() - x);
+      for (var i = 0; i < lignes.length; i++) {
+        var yb = etat.y + 8.4 * F;
+        doc.text(lignes[i], x, yb);
+        if (opts.souligne) {
+          trait(ENCRE, 0.5);
+          doc.line(x, yb + 1.5, x + doc.getTextWidth(lignes[i]), yb + 1.5);
+        }
+        etat.y += 11 * F;
+      }
+      etat.y += (opts.apres === undefined ? 1.5 : opts.apres);
+    }
+
+    /* La barre grise centree du questionnaire : « Personal Information »,
+       « History », « Additional Information ». */
+    function barre(t) {
+      place((14 + 18) * F);
+      fond(BARRE);
+      doc.rect(gauche(), etat.y, droite() - gauche(), 12 * F, 'F');
+      police('bold', 8.6 * F, ENCRE);
+      doc.text(t, (gauche() + droite()) / 2, etat.y + 8.7 * F, { align: 'center' });
+      etat.y += 16 * F;
     }
 
     function puces(items) {
+      var xP = gauche() + 14, xT = gauche() + 26;
       for (var i = 0; i < items.length; i++) {
-        var lg = doc.splitTextToSize(items[i], UTILE - 16);
-        place(lg.length * 11.6 + 2);
-        doc.setFillColor(SAGE[0], SAGE[1], SAGE[2]);
-        doc.circle(L + 3, etat.y - 3, 1.8, 'F');
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-        doc.setTextColor(INK[0], INK[1], INK[2]);
+        police('normal', T_TEXTE, ENCRE);
+        var lg = doc.splitTextToSize(items[i], droite() - xT);
+        if (place(lg.length * IL)) police('normal', T_TEXTE, ENCRE);
+        fond(ENCRE);
+        doc.circle(xP, etat.y + IL * 0.78 - 2.7 * F, 1.5, 'F');
         for (var j = 0; j < lg.length; j++) {
-          if (j > 0) place(11.6);
-          doc.text(lg[j], L + 16, etat.y);
-          etat.y += 11.6;
+          doc.text(lg[j], xT, etat.y + IL * 0.78);
+          etat.y += IL;
         }
-        etat.y += 2;
+        etat.y += 1.4;
       }
-      etat.y += 4;
+      etat.y += 2.5;
     }
 
-    function liste(items) {
-      var indent = 18;
-      for (var i = 0; i < items.length; i++) {
-        var lg = doc.splitTextToSize(items[i], UTILE - indent);
-        place(lg.length * 12.5 + 4);
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.2);
-        doc.setTextColor(SAGE[0], SAGE[1], SAGE[2]);
-        doc.text(String(i + 1) + '.', L, etat.y);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(INK[0], INK[1], INK[2]);
-        for (var j = 0; j < lg.length; j++) {
-          if (j > 0) place(12.5);
-          doc.text(lg[j], L + indent, etat.y);
-          etat.y += 12.5;
-        }
-        etat.y += 4;
-      }
-      etat.y += 4;
-    }
+    /* ─── Les cases et les reponses ─────────────────────────────────────── */
 
-    /* Champs en deux colonnes : libelle discret, valeur soulignee.
-       Une valeur vide laisse un trait a remplir a la main. */
-    function champs(paires, colonnes) {
-      var nb = colonnes || 2;
-      var colonne = UTILE / nb;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.2);
-      for (var i = 0; i < paires.length; i += nb) {
-        /* Un libelle long tient sur deux lignes plutot que d'etre tronque :
-           « IF AUTHORIZED REPRESENTATIVE, RELATIONSHIP TO » sans son
-           dernier mot ne veut plus rien dire sur un document juridique. */
-        var lignesEtiq = 1;
-        for (var e = 0; e < nb; e++) {
-          var pe = paires[i + e];
-          if (!pe || !pe[0]) continue;
-          var n = doc.splitTextToSize(pe[0].toUpperCase(), colonne - 16).length;
-          if (n > lignesEtiq) lignesEtiq = Math.min(n, 2);
-        }
-        var hEtiq = lignesEtiq * 9;
+    /* Une case du papier. Cochee, elle recoit une coche a l'encre bleue,
+       tracee comme au stylo : Yanis l'a preferee au carre plein le
+       2026-09-11, c'est ainsi qu'on coche un formulaire papier. */
+    function coteCase() { return 7.4 * Math.min(F, 1.12); }
 
-        /* Et la valeur pareillement. « 2417 Greenmount Avenue, Apt 3B,
-           Baltimore, MD 21218 » coupe apres « MD » n'est plus une adresse :
-           on ne peut ni y envoyer un courrier, ni verifier une couverture.
-           Le libelle avait ete corrige, la valeur souffrait du meme mal. */
-        var lignesVal = 1;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.6);
-        for (var v = 0; v < nb; v++) {
-          var pv = paires[i + v];
-          if (!pv || !pv[0]) continue;
-          var nv = doc.splitTextToSize(nonVide(pv[1]), colonne - 16).length;
-          if (nv > lignesVal) lignesVal = Math.min(nv, 2);
-        }
-        var hVal = (lignesVal - 1) * 11;
-
-        place(hEtiq + hVal + 27);
-        for (var k = 0; k < nb; k++) {
-          var p = paires[i + k];
-          if (!p || !p[0]) continue;
-          var x = L + k * colonne, larg = colonne - 16;
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(7.2);
-          doc.setTextColor(SAGE[0], SAGE[1], SAGE[2]);
-          var lg = doc.splitTextToSize(p[0].toUpperCase(), larg);
-          for (var j = 0; j < lignesEtiq && j < lg.length; j++) {
-            doc.text(lg[j], x, etat.y + j * 9);
-          }
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(9.6);
-          doc.setTextColor(INK[0], INK[1], INK[2]);
-          var lv = doc.splitTextToSize(nonVide(p[1]), larg);
-          for (var w = 0; w < lignesVal && w < lv.length; w++) {
-            doc.text(lv[w], x, etat.y + hEtiq + 5 + w * 11);
-          }
-          doc.setDrawColor(LIGNE[0], LIGNE[1], LIGNE[2]); doc.setLineWidth(0.7);
-          doc.line(x, etat.y + hEtiq + hVal + 10, x + larg, etat.y + hEtiq + hVal + 10);
-        }
-        etat.y += hEtiq + hVal + 27;
-      }
-      etat.y += 2;
-    }
-
-    /* Question ouverte : l'intitule au-dessus, la reponse dessous, sur toute
-       la largeur. Une reponse vide affiche "Not provided" plutot que rien :
-       un blanc laisse croire a un oubli de generation. */
-    function question(q, r, opts) {
-      opts = opts || {};
-      var val = nonVide(r);
-      var lgQ = doc.splitTextToSize(q, UTILE);
-      var lgR = doc.splitTextToSize(val || 'Not provided', UTILE - 12);
-      place(lgQ.length * 11 + lgR.length * 12 + 14);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.4);
-      doc.setTextColor(FOREST[0], FOREST[1], FOREST[2]);
-      for (var i = 0; i < lgQ.length; i++) { doc.text(lgQ[i], L, etat.y); etat.y += 11; }
-      etat.y += 3;
-      doc.setFont('helvetica', val ? 'normal' : 'italic'); doc.setFontSize(9.4);
-      if (val) doc.setTextColor(INK[0], INK[1], INK[2]);
-      else doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-      for (var j = 0; j < lgR.length; j++) {
-        place(12);
-        doc.text(lgR[j], L + 12, etat.y);
-        etat.y += 12;
-      }
-      etat.y += (opts.apres === undefined ? 8 : opts.apres);
-    }
-
-    /* Question fermee : intitule a gauche, reponse a droite, sur une ligne. */
-    function questionCourte(q, r) {
-      var val = nonVide(r) || '—';
-      var largeQ = UTILE - 110;
-      var lg = doc.splitTextToSize(q, largeQ);
-      place(lg.length * 11.5 + 8);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8);
-      doc.setTextColor(INK[0], INK[1], INK[2]);
-      var yDebut = etat.y;
-      for (var i = 0; i < lg.length; i++) {
-        if (i > 0) place(11.5);
-        doc.text(lg[i], L, etat.y);
-        etat.y += 11.5;
-      }
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.8);
-      doc.setTextColor(estOui(val) ? GOLD[0] : SAGE[0], estOui(val) ? GOLD[1] : SAGE[1],
-                       estOui(val) ? GOLD[2] : SAGE[2]);
-      doc.text(val, LARG - L, yDebut, { align: 'right' });
-      doc.setDrawColor(LIGNE[0], LIGNE[1], LIGNE[2]); doc.setLineWidth(0.5);
-      doc.line(L, etat.y + 1, LARG - L, etat.y + 1);
-      etat.y += 9;
-    }
-
-    function caseACocher(coche, texte) {
-      var lg = doc.splitTextToSize(texte, UTILE - 22);
-      place(lg.length * 12 + 6);
-      var yb = etat.y - 8;
-      doc.setDrawColor(SAGE[0], SAGE[1], SAGE[2]); doc.setLineWidth(0.9);
-      doc.rect(L, yb, 10, 10);
+    function carre(x, yb, coche) {
+      var c = coteCase(), y = yb - c + 0.7;
+      trait(ENCRE, 0.6);
+      doc.rect(x, y, c, c);
       if (coche) {
-        doc.setFillColor(SAGE[0], SAGE[1], SAGE[2]);
-        doc.rect(L + 2, yb + 2, 6, 6, 'F');
+        trait(STYLO, 1.25 * Math.min(F, 1.12));
+        doc.setLineCap('round'); doc.setLineJoin('round');
+        doc.lines([[0.24 * c, 0.3 * c], [0.62 * c, -0.84 * c]], x + 0.16 * c, y + 0.52 * c,
+                  [1, 1], 'S', false);
+        doc.setLineCap('butt'); doc.setLineJoin('miter');
       }
-      doc.setFont('helvetica', coche ? 'bold' : 'normal'); doc.setFontSize(9);
-      var c = coche ? INK : GREY;
-      doc.setTextColor(c[0], c[1], c[2]);
-      for (var i = 0; i < lg.length; i++) {
-        if (i > 0) place(12);
-        doc.text(lg[i], L + 20, etat.y);
-        etat.y += 12;
-      }
-      etat.y += 6;
     }
 
-    /* Grille de cases a cocher sur trois colonnes, comme la liste de symptomes
-       du formulaire papier : on garde les non coches, leur absence est une
-       information clinique. */
-    function grilleCases(items, colonnes) {
-      var nb = colonnes || 3;
-      var colonne = UTILE / nb;
-      for (var i = 0; i < items.length; i += nb) {
-        place(20);
-        for (var k = 0; k < nb; k++) {
-          var it = items[i + k];
-          if (!it) continue;
-          var x = L + k * colonne;
-          doc.setDrawColor(SAGE[0], SAGE[1], SAGE[2]); doc.setLineWidth(0.8);
-          doc.rect(x, etat.y - 7.5, 8.5, 8.5);
-          if (it.coche) {
-            doc.setFillColor(SAGE[0], SAGE[1], SAGE[2]);
-            doc.rect(x + 1.8, etat.y - 5.7, 4.9, 4.9, 'F');
+    /* La plus grande taille, entre T_REP et T_REP_MIN, a laquelle une reponse
+       tient sur sa ligne. Zero si elle n'y tient pas : elle passera alors a
+       la ligne plutot que d'etre coupee. Une adresse sans son code postal
+       n'est plus une adresse. */
+    function taillePour(val, larg) {
+      doc.setFont('helvetica', 'normal');
+      for (var t = T_REP; t >= T_REP_MIN - 0.01; t -= 0.3) {
+        doc.setFontSize(t);
+        if (doc.getTextWidth(val) <= larg) return t;
+      }
+      return 0;
+    }
+
+    /* Largeur d'une rangee de cases « ☐ Yes  ☐ No », pour la placer. */
+    function largeurCases(options, opts) {
+      opts = opts || {};
+      police('normal', opts.taille || T_ETIQ, ENCRE);
+      var w = 0, d = coteCase() + 3;
+      for (var i = 0; i < options.length; i++) {
+        w += d + doc.getTextWidth(options[i].texte);
+        if (options[i].autre !== undefined) w += 4 + (opts.largeAutre || 80) * F;
+        if (i < options.length - 1) w += (opts.ecart || 11);
+      }
+      return w;
+    }
+
+    /* Des cases sur la ligne, comme le papier les pose. Une option « Other »
+       porte sa ligne a remplir. */
+    function cases(x, yb, options, opts) {
+      opts = opts || {};
+      var xs = x, d = coteCase() + 3;
+      for (var i = 0; i < options.length; i++) {
+        var o = options[i];
+        police('normal', opts.taille || T_ETIQ, ENCRE);
+        carre(xs, yb, o.coche);
+        encre(ENCRE);
+        doc.text(o.texte, xs + d, yb);
+        xs += d + doc.getTextWidth(o.texte);
+        if (o.autre !== undefined) {
+          var lA = (opts.largeAutre || 80) * F;
+          xs += 4;
+          trait(TRAIT, 0.5); doc.line(xs, yb + 2, xs + lA, yb + 2);
+          var v = nonVide(o.autre);
+          if (v) {
+            var t = taillePour(v, lA - 3) || T_REP_MIN;
+            doc.setFontSize(t); encre(STYLO);
+            doc.text(doc.splitTextToSize(v, lA - 3)[0], xs + 2, yb);
           }
-          doc.setFont('helvetica', it.coche ? 'bold' : 'normal'); doc.setFontSize(7.8);
-          var c = it.coche ? INK : GREY;
-          doc.setTextColor(c[0], c[1], c[2]);
-          doc.text(doc.splitTextToSize(it.texte, colonne - 20)[0], x + 13, etat.y);
+          xs += lA;
         }
-        etat.y += 16;
+        xs += (opts.ecart || 11);
       }
-      etat.y += 6;
     }
 
-    /* Tableau simple : en-tetes sur fond vert, lignes alternees. */
-    function tableau(entetes, lignes, parts) {
+    /* La signature du patient posee sur sa ligne, a sa taille, sans
+       deformation. Chaque place de signature est notee, signee ou non. */
+    function signer(uri, x, yLigne, larg, lib, extra) {
+      signatures.push({ cle: etat.cle, libelle: lib, page: page(), image: !!nonVide(uri) });
+      extra = extra || {};
+      if (nonVide(uri)) {
+        try {
+          var pr = doc.getImageProperties(uri);
+          var hMax = 24 * F, wMax = Math.min(larg - 8, 128 * F);
+          var ech = Math.min(wMax / pr.width, hMax / pr.height);
+          doc.addImage(uri, 'PNG', x + 4, yLigne - pr.height * ech - 0.6,
+                       pr.width * ech, pr.height * ech);
+        } catch (e) { }
+      }
+      /* Le papier ne prevoit pas de nom sous la signature du temoin. Le
+         formulaire le demande pourtant : il s'ecrit en petit au bout de la
+         ligne plutot que de se perdre. */
+      if (nonVide(extra.date) || nonVide(extra.nom)) {
+        police('normal', 7.6, STYLO);
+        doc.text([nonVide(extra.nom), nonVide(extra.date)].filter(Boolean).join('   '),
+                 x + larg - 2, yLigne - 2.5, { align: 'right' });
+      }
+    }
+
+    /* Une ligne du formulaire papier : « Libelle: ______ », un ou plusieurs
+       segments cote a cote. `parts` donne la largeur de chaque segment en
+       fraction de la ligne ; le libelle prend ce qu'il lui faut, le trait le
+       reste, et la reponse s'ecrit sur le trait, a l'encre bleue.
+
+       Une valeur peut etre :
+         - un texte, ecrit sur le trait ;
+         - { sig: image }, une signature posee sur le trait ;
+         - { cases: [...] }, des cases a cocher sur la ligne ;
+         - { texte: '...' }, du texte imprime, sans trait.
+
+       `opts.brut` garde les libelles tels quels, sans deux-points : « Signed
+       this ___ day of ___ 20___ » se lit d'une traite. `opts.etiquette`
+       resserre les libelles d'une ligne trop chargee. */
+    function rang(items, parts, opts) {
+      opts = opts || {};
+      var x0 = opts.depuis || (gauche() + (opts.retrait || 0));
+      var dispo = droite() - x0, n = items.length, i;
+      var tLab = opts.etiquette || T_ETIQ;
+      if (!parts) { parts = []; for (i = 0; i < n; i++) parts.push(1 / n); }
+      var avecSig = items.some(function (it) { return it[1] && it[1].sig !== undefined; });
+      var hBase = avecSig ? H_SIG : H_RANG;
+
+      /* 1. Mesurer : chaque reponse tient-elle sur son trait ? */
+      var segs = [], x = x0, extra = 0;
+      for (i = 0; i < n; i++) {
+        var lab = opts.brut ? nonVide(items[i][0]) : libelle(items[i][0]), val = items[i][1];
+        var larg = dispo * parts[i];
+        police('normal', tLab, GRIS);
+        var aCases = !!(val && typeof val === 'object' && val.cases);
+        var s = { x: x, larg: larg, lab: lab,
+                  lLab: lab ? doc.getTextWidth(lab) + (aCases ? 8 : 4) : 0,
+                  val: val, fin: x + larg - (i < n - 1 ? 9 : 0) };
+        if (val === null || val === undefined || typeof val !== 'object') {
+          s.texte = nonVide(val);
+          var zone = s.fin - (s.x + s.lLab) - 3;
+          if (s.texte) {
+            s.taille = taillePour(s.texte, zone);
+            if (n === 1 && (!s.taille || s.taille < T_REP * 0.88)) {
+              /* Seule sur sa ligne et trop longue pour son trait, la reponse
+                 continue sur la ligne du dessous, a sa taille, comme on
+                 continue d'ecrire sous la ligne d'un formulaire papier. La
+                 resserrer jusqu'au bout la rendait illisible. */
+              police('normal', T_REP, STYLO);
+              var premiere = zone > 60 ? (doc.splitTextToSize(s.texte, zone)[0] || '') : '';
+              var reste = s.texte.slice(premiere.length).trim();
+              s.suite = [premiere].concat(reste ? doc.splitTextToSize(reste, s.fin - x0 - 12) : []);
+              s.taille = T_REP;
+              extra = Math.max(extra, (s.suite.length - 1) * 13 * F);
+            } else if (!s.taille) {
+              s.taille = 7.8;
+              doc.setFontSize(s.taille);
+              s.lignes = doc.splitTextToSize(s.texte, Math.max(zone, 40));
+              extra = Math.max(extra, (s.lignes.length - 1) * 9.4);
+            }
+          }
+        }
+        segs.push(s);
+        x += larg;
+      }
+
+      /* 2. Placer, puis dessiner. */
+      place(hBase + extra);
+      var yb = etat.y + hBase - 5;
+      for (i = 0; i < segs.length; i++) {
+        var g = segs[i], xz = g.x + g.lLab;
+        if (g.lab) { police('normal', tLab, GRIS); doc.text(g.lab, g.x, yb); }
+        var v = g.val;
+        if (v && typeof v === 'object' && v.texte !== undefined) {
+          police('normal', T_ETIQ, ENCRE);
+          doc.text(String(v.texte), xz, yb);
+        } else if (v && typeof v === 'object' && v.cases) {
+          cases(xz, yb, v.cases, v);
+        } else if (v && typeof v === 'object' && v.sig !== undefined) {
+          trait(TRAIT, 0.5); doc.line(xz, yb + 2, g.fin, yb + 2);
+          signer(v.sig, xz, yb + 2, g.fin - xz, g.lab, v);
+        } else {
+          trait(TRAIT, 0.5); doc.line(xz, yb + 2, g.fin, yb + 2);
+          if (g.suite) {
+            police('normal', g.taille, STYLO);
+            if (g.suite[0]) doc.text(g.suite[0], xz + 2, yb);
+            for (var q = 1; q < g.suite.length; q++) {
+              var yq = yb + q * 13 * F;
+              trait(TRAIT, 0.5); doc.line(x0 + 10, yq + 2, g.fin, yq + 2);
+              doc.text(g.suite[q], x0 + 12, yq);
+            }
+          } else if (g.lignes) {
+            police('normal', g.taille, STYLO);
+            for (var j = 0; j < g.lignes.length; j++) {
+              if (j > 0) { trait(TRAIT, 0.5); doc.line(xz, yb + 2 + j * 9.4, g.fin, yb + 2 + j * 9.4); }
+              doc.text(g.lignes[j], xz + 2, yb + j * 9.4);
+            }
+          } else if (g.texte) {
+            police('normal', g.taille, STYLO);
+            doc.text(g.texte, xz + 2, yb);
+          }
+        }
+      }
+      etat.y += hBase + extra + (opts.apres || 0);
+    }
+
+    /* La question sur sa ligne, la reponse sur les lignes du dessous. Le
+       papier laisse ainsi deux lignes vides sous « What do you consider to
+       be some of your strengths » : on garde au moins ce nombre de lignes. */
+    function rangDessous(question, val, opts) {
+      opts = opts || {};
+      var x0 = gauche() + (opts.retrait || 0);
+      var v = nonVide(val);
+      police('normal', T_REP, STYLO);
+      var lg = v ? doc.splitTextToSize(v, droite() - x0 - 14) : [];
+      var nb = Math.max(lg.length, opts.lignes || 1);
+      police('normal', T_ETIQ, GRIS);
+      var lq = doc.splitTextToSize(question, droite() - x0);
+      place(lq.length * IL + nb * 14 * F + 2);
+      police('normal', T_ETIQ, GRIS);
+      for (var i = 0; i < lq.length; i++) {
+        doc.text(lq[i], x0, etat.y + IL * 0.78);
+        etat.y += IL;
+      }
+      for (var j = 0; j < nb; j++) {
+        var yb = etat.y + 10.5 * F;
+        trait(TRAIT, 0.5);
+        doc.line(x0 + 10, yb + 2, droite(), yb + 2);
+        if (lg[j]) { police('normal', T_REP, STYLO); doc.text(lg[j], x0 + 12, yb); }
+        etat.y += 14 * F;
+      }
+      etat.y += (opts.apres === undefined ? 2 : opts.apres);
+    }
+
+    /* Une rangee de cases qui passe a la ligne si elle deborde, precedee ou
+       non d'un libelle. */
+    function rangCases(lab, options, opts) {
+      opts = opts || {};
+      var x0 = gauche() + (opts.retrait || 0), xMax = droite();
+      police('normal', T_ETIQ, GRIS);
+      var lLab = lab ? doc.getTextWidth(libelle(lab)) + 6 : 0;
+      var lignes = [[]], xl = x0 + lLab;
+      for (var i = 0; i < options.length; i++) {
+        var w = largeurCases([options[i]], opts);
+        if (xl + w > xMax && lignes[lignes.length - 1].length) { lignes.push([]); xl = x0 + lLab; }
+        lignes[lignes.length - 1].push(options[i]);
+        xl += w + (opts.ecart || 11);
+      }
+      place(lignes.length * 14 * F + 2);
+      for (var k = 0; k < lignes.length; k++) {
+        var yb = etat.y + 10.5 * F;
+        if (k === 0 && lab) { police('normal', T_ETIQ, GRIS); doc.text(libelle(lab), x0, yb); }
+        cases(x0 + lLab, yb, lignes[k], opts);
+        etat.y += 14 * F;
+      }
+      etat.y += (opts.apres === undefined ? 2 : opts.apres);
+    }
+
+    /* Une case suivie d'une phrase, qui peut tenir sur plusieurs lignes. */
+    function caseTexte(coche, texte, opts) {
+      opts = opts || {};
+      var x0 = gauche() + (opts.retrait || 0), d = coteCase() + 3.6;
+      police('normal', T_ETIQ, ENCRE);
+      var lg = doc.splitTextToSize(texte, droite() - x0 - d);
+      if (place(lg.length * IL + 3)) police('normal', T_ETIQ, ENCRE);
+      carre(x0, etat.y + IL * 0.78, coche);
+      encre(ENCRE);
+      for (var i = 0; i < lg.length; i++) {
+        doc.text(lg[i], x0 + d, etat.y + IL * 0.78);
+        etat.y += IL;
+      }
+      etat.y += (opts.apres === undefined ? 3.5 : opts.apres);
+    }
+
+    /* « Poor  Unsatisfactory  Satisfactory  Good  Very good » : le papier
+       demande d'entourer. On entoure, a l'encre bleue. `separateur` rend le
+       « yes / no » du tableau des antecedents familiaux. */
+    function entourer(x, yb, options, choix, ecart, separateur) {
+      var c = nonVide(choix).toLowerCase();
+      police('normal', T_ETIQ, ENCRE);
+      for (var i = 0; i < options.length; i++) {
+        var w = doc.getTextWidth(options[i]);
+        if (options[i].toLowerCase() === c) {
+          trait(STYLO, 0.9);
+          doc.ellipse(x + w / 2, yb - 2.9 * F, w / 2 + 4.5, 6.2 * F, 'S');
+        }
+        encre(ENCRE);
+        doc.text(options[i], x, yb);
+        x += w + (ecart || 20);
+        if (separateur && i < options.length - 1) {
+          doc.text(separateur, x, yb);
+          x += doc.getTextWidth(separateur) + (ecart || 20);
+        }
+      }
+    }
+
+    function echelle(options, choix, opts) {
+      opts = opts || {};
+      place(16 * F);
+      entourer(gauche() + (opts.retrait || 0), etat.y + 11 * F, options, choix, opts.ecart);
+      etat.y += 16 * F + (opts.apres || 0);
+    }
+
+    /* ─── Tableaux et encadres ──────────────────────────────────────────── */
+
+    /* Une cellule porte du texte, un intitule { titre }, une paire
+       [libelle, reponse], une signature { sig }, des cases { cases }, ou un
+       choix a entourer { entourer }. Sa hauteur se mesure avant d'etre
+       dessinee. */
+    function lignesCellule(c, w) {
+      if (!c) return 1;
+      if (typeof c === 'string') { police('normal', T_ETIQ); return doc.splitTextToSize(c, w - 8).length; }
+      if (c.titre) { police('bold', T_ETIQ); return doc.splitTextToSize(c.titre, w - 8).length; }
+      if (c.cases && c.cases.length === 1 && c.cases[0].autre === undefined) {
+        police('normal', T_ETIQ); return doc.splitTextToSize(c.cases[0].texte, w - 20).length;
+      }
+      if (Array.isArray(c)) {
+        police('normal', T_ETIQ);
+        var lLab = doc.getTextWidth(libelle(c[0])) + 4, v = nonVide(c[1]);
+        if (!v || taillePour(v, w - 8 - lLab)) return 1;
+        police('normal', 7.8);
+        return 1 + doc.splitTextToSize(v, w - 12).length;
+      }
+      return 1;
+    }
+
+    /* Dans une rangee haute, celle d'une signature, le texte se pose sur la
+       ligne du bas, a hauteur du libelle de signature : « Date » en haut de
+       sa case et la signature en bas de la sienne ne se lisaient plus comme
+       une meme ligne. */
+    function dessineCellule(c, x, y, w, h) {
+      var yb = (h >= H_SIG - 2) ? y + h - 7 : y + 11.2 * F, i, pas = 10 * F;
+      if (!c) return;
+      if (typeof c === 'string') {
+        police('normal', T_ETIQ, ENCRE);
+        var lg = doc.splitTextToSize(c, w - 8);
+        for (i = 0; i < lg.length; i++) doc.text(lg[i], x + 4, yb + i * pas);
+      } else if (c.titre) {
+        police('bold', T_ETIQ, ENCRE);
+        var lt = doc.splitTextToSize(c.titre, w - 8);
+        for (i = 0; i < lt.length; i++) {
+          doc.text(lt[i], x + 4, yb + i * pas);
+          if (c.souligne) {
+            trait(ENCRE, 0.5);
+            doc.line(x + 4, yb + i * pas + 1.5, x + 4 + doc.getTextWidth(lt[i]), yb + i * pas + 1.5);
+          }
+        }
+      } else if (c.sig !== undefined) {
+        police('normal', T_ETIQ, GRIS);
+        var lab = libelle(c.libelle), lL = doc.getTextWidth(lab) + 6;
+        doc.text(lab, x + 4, y + h - 7);
+        signer(c.sig, x + 4 + lL, y + h - 5, w - lL - 8, c.libelle, c);
+      } else if (c.cases) {
+        if (c.cases.length === 1 && c.cases[0].autre === undefined) {
+          var d = coteCase() + 3;
+          police('normal', T_ETIQ, ENCRE);
+          var lc = doc.splitTextToSize(c.cases[0].texte, w - 10 - d);
+          carre(x + 5, yb, c.cases[0].coche);
+          encre(ENCRE);
+          for (i = 0; i < lc.length; i++) doc.text(lc[i], x + 5 + d, yb + i * pas);
+        } else {
+          cases(x + 5, yb, c.cases, c);
+        }
+      } else if (c.entourer) {
+        entourer(x + 8, yb, c.entourer, c.choix, 8, '/');
+      } else if (Array.isArray(c)) {
+        police('normal', T_ETIQ, GRIS);
+        var l2 = libelle(c[0]), lLab = doc.getTextWidth(l2) + 4, v = nonVide(c[1]);
+        doc.text(l2, x + 4, yb);
+        if (!v) return;
+        var t = taillePour(v, w - 8 - lLab);
+        if (t) { police('normal', t, STYLO); doc.text(v, x + 4 + lLab, yb); return; }
+        police('normal', 7.8, STYLO);
+        var lv = doc.splitTextToSize(v, w - 12);
+        for (i = 0; i < lv.length; i++) doc.text(lv[i], x + 8, yb + 9.6 * (i + 1));
+      }
+    }
+
+    /* Un tableau a bordures, comme ceux du papier. */
+    function tableau(lignes, parts, opts) {
+      opts = opts || {};
+      var x0 = gauche(), larg = droite() - x0;
       var total = parts.reduce(function (a, b) { return a + b; }, 0);
-      var largeurs = parts.map(function (p) { return UTILE * p / total; });
-      function ligne(cellules, opt) {
-        var hauteurs = cellules.map(function (c, i) {
-          return doc.splitTextToSize(String(c === undefined ? '' : c), largeurs[i] - 10).length;
-        });
-        var nbl = Math.max.apply(null, hauteurs);
-        var h = nbl * 10.5 + 8;
+      var largeurs = parts.map(function (p) { return larg * p / total; });
+      for (var r = 0; r < lignes.length; r++) {
+        var ligne = lignes[r], h = (opts.hMin || 16) * F;
+        for (var i = 0; i < ligne.length; i++) {
+          var c = ligne[i];
+          if (c && c.sig !== undefined) h = Math.max(h, H_SIG);
+          else h = Math.max(h, 6 * F + lignesCellule(c, largeurs[i]) * 10 * F);
+        }
         place(h);
-        if (opt.entete) {
-          doc.setFillColor(FOREST[0], FOREST[1], FOREST[2]);
-          doc.rect(L, etat.y - 9, UTILE, h, 'F');
-        } else if (opt.paire) {
-          doc.setFillColor(DOUX[0], DOUX[1], DOUX[2]);
-          doc.rect(L, etat.y - 9, UTILE, h, 'F');
+        if (opts.fonds && opts.fonds[r]) {
+          fond(opts.fonds[r]); doc.rect(x0, etat.y, larg, h, 'F');
         }
-        var x = L;
-        for (var i = 0; i < cellules.length; i++) {
-          doc.setFont('helvetica', opt.entete ? 'bold' : 'normal');
-          doc.setFontSize(opt.entete ? 7.6 : 8.4);
-          if (opt.entete) doc.setTextColor(255, 255, 255);
-          else doc.setTextColor(INK[0], INK[1], INK[2]);
-          var lg = doc.splitTextToSize(String(cellules[i] === undefined ? '' : cellules[i]),
-                                       largeurs[i] - 10);
-          for (var j = 0; j < lg.length; j++) doc.text(lg[j], x + 5, etat.y + j * 10.5);
-          x += largeurs[i];
+        var x = x0;
+        for (var k = 0; k < ligne.length; k++) {
+          dessineCellule(ligne[k], x, etat.y, largeurs[k], h);
+          x += largeurs[k];
         }
-        doc.setDrawColor(LIGNE[0], LIGNE[1], LIGNE[2]); doc.setLineWidth(0.5);
-        doc.line(L, etat.y + h - 9, LARG - L, etat.y + h - 9);
+        trait(CADRE, 0.6);
+        doc.rect(x0, etat.y, larg, h);
+        var xx = x0;
+        for (var m = 0; m < ligne.length - 1; m++) {
+          xx += largeurs[m];
+          doc.line(xx, etat.y, xx, etat.y + h);
+        }
         etat.y += h;
       }
-      ligne(entetes, { entete: true });
-      for (var r = 0; r < lignes.length; r++) ligne(lignes[r], { paire: r % 2 === 1 });
-      etat.y += 8;
+      etat.y += (opts.apres === undefined ? 7 : opts.apres);
     }
 
-    /* Une piece jointe (carte d'assurance, piece d'identite) posee dans le
-       document : c'est la seule copie conservee, elle doit rester lisible. */
-    function piece(img, legende) {
-      var largeMax = UTILE * 0.62, hautMax = 210;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.6);
-      doc.setTextColor(SAGE[0], SAGE[1], SAGE[2]);
-      if (!img) {
-        place(26);
-        doc.text(legende.toUpperCase(), L, etat.y);
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(8.4);
-        doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-        doc.text('Not provided', L + 200, etat.y);
-        etat.y += 18;
-        return;
-      }
-      var ech = Math.min(largeMax / img.w, hautMax / img.h, 1);
-      var w = img.w * ech, h = img.h * ech;
-      place(h + 30);
-      doc.text(legende.toUpperCase(), L, etat.y);
-      etat.y += 8;
-      try { doc.addImage(img.uri, img.format, L, etat.y, w, h); } catch (e) { }
-      doc.setDrawColor(LIGNE[0], LIGNE[1], LIGNE[2]); doc.setLineWidth(0.8);
-      doc.rect(L, etat.y, w, h);
-      etat.y += h + 16;
+    /* Un encadre du papier, par exemple le bloc « I agree that the
+       information above has not changed » et ses lignes de signature. Les
+       briques qu'il contient se decalent de sa marge. */
+    function encadre(fn, opts) {
+      opts = opts || {};
+      var y0 = etat.y, p0 = page();
+      etat.marge = 6; etat.y += 2;
+      fn();
+      etat.marge = 0;
+      etat.y += 2;
+      var yH = (page() === p0) ? y0 : Y_SUITE;
+      trait(CADRE, 0.7);
+      doc.rect(L, yH, UTILE, etat.y - yH);
+      etat.y += (opts.apres === undefined ? 7 : opts.apres);
     }
 
-    /* Bloc de signature : image si elle existe, sinon une ligne vierge a
-       signer a la main. C'est ce qui laisse sa place a Caroline Bonu tant
-       qu'elle n'a pas enregistre la sienne. */
-    function signature(opts) {
-      /* 96 points ne suffisent pas : avec le nom imprime et la qualite du
-         signataire, le bloc en fait 110 et venait frotter le pied de page.
-         On reserve la hauteur reelle plutot que celle du cas le plus court. */
-      place(118);
-      var larg = UTILE * 0.52;
-      var yImg = etat.y;
-      if (opts.image) {
-        try { doc.addImage(opts.image, 'PNG', L, yImg, 150, 46); } catch (e) { }
-      }
-      var yl = yImg + 50;
-      doc.setDrawColor(INK[0], INK[1], INK[2]); doc.setLineWidth(0.8);
-      doc.line(L, yl, L + larg, yl);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.4);
-      doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-      doc.text(opts.libelle, L, yl + 11);
-
-      var xd = L + larg + 30, largD = LARG - L - xd;
-      doc.setDrawColor(INK[0], INK[1], INK[2]);
-      doc.line(xd, yl, xd + largD, yl);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.6);
-      doc.setTextColor(INK[0], INK[1], INK[2]);
-      if (nonVide(opts.date)) doc.text(opts.date, xd, yl - 6);
-      doc.setFontSize(7.4); doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-      doc.text(opts.libelleDate || 'DATE SIGNED (MM/DD/YYYY)', xd, yl + 11);
-
-      etat.y = yl + 26;
-      if (nonVide(opts.nomImprime)) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.2);
-        doc.setTextColor(INK[0], INK[1], INK[2]);
-        doc.text(opts.nomImprime, L, etat.y); etat.y += 12;
-      }
-      if (nonVide(opts.sousTitre)) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.4);
-        doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-        doc.text(opts.sousTitre, L, etat.y); etat.y += 12;
-      }
-      etat.y += 10;
+    /* Le filet qui separe deux lignes d'un encadre. */
+    function filet() {
+      trait(CADRE, 0.5);
+      doc.line(L, etat.y + 1, R, etat.y + 1);
+      etat.y += 2.5;
     }
 
-    function encadre(texte) {
-      var lg = doc.splitTextToSize(texte, UTILE - 28);
-      var h = lg.length * 11.5 + 20;
-      place(h + 8);
-      doc.setFillColor(DOUX[0], DOUX[1], DOUX[2]);
-      doc.roundedRect(L, etat.y - 10, UTILE, h, 6, 6, 'F');
-      doc.setDrawColor(SAGE[0], SAGE[1], SAGE[2]); doc.setLineWidth(2);
-      doc.line(L, etat.y - 10, L, etat.y - 10 + h);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.4);
-      doc.setTextColor(INK[0], INK[1], INK[2]);
-      var yy = etat.y + 4;
-      for (var i = 0; i < lg.length; i++) { doc.text(lg[i], L + 14, yy); yy += 11.5; }
-      etat.y += h + 4;
+    /* Le cadre d'une piece : taille fixe, l'image posee entiere et centree,
+       jamais recadree, jamais deformee. Une piece d'identite rognee ne
+       prouve plus rien. Un cadre vide dit « Not provided » : un blanc
+       laisserait croire a un defaut de fabrication. */
+    function cadreImage(img, x, y, w, h, legende) {
+      police('bold', 7.4, GRIS);
+      doc.text(legende.toUpperCase(), x, y - 4);
+      if (img) {
+        var ech = Math.min(w / img.w, h / img.h);
+        var iw = img.w * ech, ih = img.h * ech;
+        try { doc.addImage(img.uri, img.format, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); } catch (e) { }
+        trait(CADRE, 0.7);
+        doc.rect(x, y, w, h);
+      } else {
+        trait(CADRE, 0.7);
+        doc.setLineDashPattern([3, 2], 0);
+        doc.rect(x, y, w, h);
+        doc.setLineDashPattern([], 0);
+        police('italic', 8.4, PALE);
+        doc.text('Not provided', x + w / 2, y + h / 2 + 3, { align: 'center' });
+      }
     }
 
-    bandeau();
     return {
-      doc: doc, etat: etat, place: place, saut: saut, section: section,
-      titreSection: titreSection, paragraphe: paragraphe, puces: puces, liste: liste,
-      champs: champs, question: question, questionCourte: questionCourte,
-      caseACocher: caseACocher, grilleCases: grilleCases, tableau: tableau,
-      piece: piece, signature: signature, encadre: encadre,
-      entete: entete, pied: pied
+      doc: doc, etat: etat,
+      reperes: reperes, signatures: signatures, debordements: debordements,
+      remplissage: remplissage,
+      ouvrir: ouvrir, saut: saut, place: place, espace: espace, pied: pied,
+      paragraphe: paragraphe, intertitre: intertitre, barre: barre, puces: puces,
+      rang: rang, rangDessous: rangDessous, rangCases: rangCases, caseTexte: caseTexte,
+      echelle: echelle, tableau: tableau, encadre: encadre, filet: filet,
+      cadreImage: cadreImage
     };
   }
 
   /* ────────────────────────────────────────────────────────────────────────
-     Petites aides communes aux dix documents.
+     Petites aides communes aux documents.
      ──────────────────────────────────────────────────────────────────────── */
 
   function ouiNon(v) {
@@ -617,6 +847,13 @@
     if (b === 'yes' || b === 'true' || b === '1') return 'Yes';
     if (b === 'no' || b === 'false' || b === '0') return 'No';
     return s;
+  }
+
+  /* « ☐ Yes  ☐ No », la reponse cochee. Sans reponse, rien n'est coche :
+     on ne repond pas a la place du patient. */
+  function ouiNonCases(v) {
+    var r = ouiNon(v);
+    return { cases: [{ texte: 'Yes', coche: r === 'Yes' }, { texte: 'No', coche: r === 'No' }] };
   }
 
   function nomComplet(d) {
@@ -638,7 +875,7 @@
       .filter(Boolean).join(', ');
     var bas = [villeEtat, nonVide(o[prefixe + '_zip'])].filter(Boolean).join(' ');
     var haut = rue + (apt ? ', Apt ' + apt : '');
-    return [haut, bas].filter(Boolean).join('  —  ');
+    return [haut, bas].filter(Boolean).join(', ');
   }
 
   /* « Signed this __ day of ________ 20__ » : le formulaire HIPAA date en
@@ -666,38 +903,45 @@
     });
   }
 
-  /* La signature du patient, la meme partout : un seul trace appose sur les
-     sept documents qui en reclament un. Le tuteur ne s'ajoute que s'il a
-     effectivement signe. */
-  function blocSignature(p, d, libelle, sousTitre) {
-    p.signature({
-      image: d.signature_image,
-      date: d.signature_date,
-      libelle: libelle || 'CLIENT SIGNATURE',
-      nomImprime: nonVide(d.printed_name) || nomComplet(d),
-      sousTitre: sousTitre || nonVide(d.signer_relationship) || 'Client',
-      libelleDate: 'DATE SIGNED (MM/DD/YYYY)'
+  /* La meme chose, avec la case « Other » et sa ligne : une reponse absente
+     de la liste la coche et s'ecrit dessus, plutot que de disparaitre. */
+  function choixAvecAutre(options, valeur, autre) {
+    var v = nonVide(valeur), a = nonVide(autre);
+    var trouve = options.some(function (o) { return o.toLowerCase() === v.toLowerCase(); });
+    return options.map(function (o) {
+      var estAutre = o.toLowerCase() === 'other';
+      var item = { texte: o, coche: trouve ? o.toLowerCase() === v.toLowerCase() : (estAutre && !!(v || a)) };
+      if (estAutre) item.autre = a || (trouve ? '' : v);
+      return item;
     });
-    if (nonVide(d.guardian_signature_image)) {
-      p.signature({
-        image: d.guardian_signature_image,
-        date: d.signature_date,
-        libelle: 'PARENT / LEGAL GUARDIAN SIGNATURE',
-        nomImprime: nonVide(d.guardian_printed_name),
-        sousTitre: nonVide(d.guardian_relationship) || 'Parent or legal guardian',
-        libelleDate: 'DATE SIGNED (MM/DD/YYYY)'
-      });
-    }
   }
 
-  var MENTION_MINEUR = 'Client is a minor 13 years and older and is self-referred; '
-    + 'client may sign without guardian.';
+  function aTuteur(d) {
+    return !!nonVide(d.guardian_signature_image);
+  }
+
+  /* Le nom qui accompagne la signature principale. */
+  function nomImprime(d) {
+    return nonVide(d.printed_name) || nomComplet(d);
+  }
+
+  /* Le papier n'a pas de ligne de tuteur sur les deux consentements ni sur
+     le HIPAA. Un mineur ne signe pourtant pas seul : quand un tuteur a signe,
+     sa ligne s'ajoute sous celle du client, et seulement alors. */
+  function ligneTuteur(p, d) {
+    if (!aTuteur(d)) return;
+    p.rang([['Parent / Legal Guardian Signature', { sig: d.guardian_signature_image,
+              nom: d.guardian_printed_name }], ['Date', d.signature_date]], [0.66, 0.34]);
+  }
+
+  var MENTION_MINEUR = '(Client is minor 13 years and older and is self-referred, client may '
+    + 'sign without guardian)';
 
   /* ════════════════════════════════════════════════════════════════════════
-     1 et 2. CONSENT FOR TREATMENT — PRP et OMHC
+     Pages 1 et 2. CONSENT FOR TREATMENT — PRP et OMHC
      Les deux consentements ont le meme corps, mot pour mot. Ils different par
      le programme, par la ligne d'assurance supplementaire du PRP, et par le
-     second signataire : le specialiste PRP d'un cote, un temoin de l'autre.
+     second signataire : le representant PRP d'un cote, un temoin de l'autre.
      ════════════════════════════════════════════════════════════════════════ */
 
   var CONSENTEMENT_PUCES = [
@@ -716,69 +960,53 @@
   ];
 
   function corpsConsentement(p, d, deuxAssurances) {
-    var paires = [
-      ['Name', nomComplet(d)],
-      ['Date of Birth', d.date_of_birth],
-      ['Telephone #', nonVide(d.home_phone) || nonVide(d.cell_phone)],
-      ['Emergency Phone Number', d.emergency_phone],
-      ['Consumer Address', adresseComplete(d)],
-      ['Social Security Number', d.ssn]
-    ];
+    p.rang([['I,', nomComplet(d)]], [0.66]);
+    p.rang([['Date of Birth', d.date_of_birth],
+            ['Telephone #', nonVide(d.home_phone) || nonVide(d.cell_phone)]], [0.36, 0.52]);
+    p.rang([['Emergency Phone Number', d.emergency_phone]], [0.6]);
+    p.rang([['Consumer Address', adresseComplete(d)]], [0.92]);
     if (deuxAssurances) {
-      paires.push(['Insurance (primary)', d.insurance_primary]);
-      paires.push(['Insurance (secondary)', d.insurance_secondary]);
+      p.rang([['Insurance', d.insurance_primary]], [0.5]);
+      p.rang([['Insurance', d.insurance_secondary], ['SSN', d.ssn]], [0.5, 0.34]);
     } else {
-      paires.push(['Insurance', d.insurance_primary]);
-      paires.push(['Insurance Member ID', d.insurance_member_id]);
+      p.rang([['Insurance', d.insurance_primary], ['SSN', d.ssn]], [0.5, 0.34]);
     }
-    p.champs(paires);
-
-    p.paragraphe('I, ' + (nomComplet(d) || '_______________________________')
-      + ', hereby consent to participate in mental health treatment services provided by '
-      + 'Ability & Empowerment Health Services. I understand that the purpose of these '
-      + 'services is to address my mental health concerns, improve my well-being, and '
-      + 'promote recovery.');
-    p.paragraphe('I acknowledge that I have been informed of the following:',
-      { gras: true, apres: 4 });
+    p.espace(4);
+    p.paragraphe('...hereby consent to participate in mental health treatment services provided by '
+      + 'Ability & Empowerment Health Services. I understand that the purpose of these services '
+      + 'is to address my mental health concerns, improve my well-being, and promote recovery.');
+    p.paragraphe('I acknowledge that I have been informed of the following:', { apres: 2 });
     p.puces(CONSENTEMENT_PUCES);
     for (var i = 0; i < CONSENTEMENT_CORPS.length; i++) p.paragraphe(CONSENTEMENT_CORPS[i]);
+    p.espace(10);
   }
 
   function contenuPrpConsent(p, d) {
-    p.encadre('Psychiatric Rehabilitation Program (PRP). Consent to participate in mental '
-      + 'health treatment services provided by Ability and Empowerment Services.');
     corpsConsentement(p, d, true);
-    blocSignature(p, d, 'CLIENT SIGNATURE');
-    p.signature({
-      image: d.prp_signature_image,
-      date: d.prp_signature_date,
-      libelle: 'PRP SIGNATURE',
-      nomImprime: nonVide(d.prp_name),
-      sousTitre: 'Psychiatric Rehabilitation Program representative',
-      libelleDate: 'DATE SIGNED (MM/DD/YYYY)'
-    });
+    p.rang([['Client Signature', { sig: d.signature_image }], ['Date', d.signature_date]],
+           [0.66, 0.34]);
+    ligneTuteur(p, d);
+    p.rang([['PRP Name', d.prp_name],
+            ['Date and signature', { sig: d.prp_signature_image,
+              date: nonVide(d.prp_signature_image) ? d.prp_signature_date : '' }]], [0.5, 0.5]);
   }
 
   function contenuOmhcConsent(p, d) {
-    p.encadre('Outpatient Mental Health Clinic (OMHC). Consent to participate in mental '
-      + 'health treatment services provided by Ability and Empowerment Services.');
     corpsConsentement(p, d, false);
-    blocSignature(p, d, 'CLIENT SIGNATURE');
-    p.signature({
-      image: d.witness_signature_image,
-      date: nonVide(d.witness_signature_date) || d.signature_date,
-      libelle: 'WITNESS SIGNATURE (IF APPLICABLE)',
-      nomImprime: nonVide(d.witness_name),
-      sousTitre: 'Witness',
-      libelleDate: 'DATE SIGNED (MM/DD/YYYY)'
-    });
+    p.rang([['Client Signature', { sig: d.signature_image }], ['Date', d.signature_date]],
+           [0.66, 0.34]);
+    ligneTuteur(p, d);
+    var temoin = nonVide(d.witness_signature_image);
+    p.rang([['Witness (if applicable)', { sig: d.witness_signature_image, nom: d.witness_name }],
+            ['Date', temoin ? (nonVide(d.witness_signature_date) || d.signature_date) : '']],
+           [0.66, 0.34]);
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     3. CLIENT INTAKE QUESTIONNAIRE
+     Pages 3, 5 et 4. CLIENT INTAKE QUESTIONNAIRE
      Trois pages dans le dossier papier, et elles y sont dans le desordre :
-     la feuille « 3 of 3 » est classee avant la « 2 of 3 ». Elles sont remises
-     dans leur ordre ici.
+     la feuille « 3 of 3 » est classee avant la « 2 of 3 ». Elles sortent ici
+     dans leur ordre, chacune avec son contenu exact.
      ════════════════════════════════════════════════════════════════════════ */
 
   var STATUTS_MARITAUX = ['Never Married', 'Domestic Partnership', 'Married',
@@ -789,7 +1017,7 @@
   var FREQUENCE_DROGUE = ['Daily', 'Weekly', 'Monthly', 'Infrequently', 'Never'];
 
   var ANTECEDENTS_FAMILIAUX = [
-    ['fam_alcohol', 'Alcohol / Substance Abuse'],
+    ['fam_alcohol', 'Alcohol/Substance Abuse'],
     ['fam_anxiety', 'Anxiety'],
     ['fam_depression', 'Depression'],
     ['fam_domestic_violence', 'Domestic Violence'],
@@ -800,206 +1028,272 @@
     ['fam_suicide_attempts', 'Suicide Attempts']
   ];
 
-  function contenuIntake(p, d, images) {
-    p.encadre('Please note: information provided on this form is protected as confidential '
-      + 'information.');
+  function contenuIntake(p, d) {
+    /* ─── 1 of 3 : page 3 du papier ─── */
+    p.paragraphe('Please note: information provided on this form is protected as confidential '
+      + 'information.', { italique: true, apres: 2 });
 
-    p.section('A', 'Personal Information');
-    p.champs([
-      ['Name', nomComplet(d)],
-      ['Date', d.today_date],
-      ['Parent / Legal Guardian (if under 18)', d.guardian_name],
-      ['Referred By (if any)', d.referred_by],
-      ['Address', adresseComplete(d)],
-      ['Date of Birth', d.date_of_birth],
-      ['Age', d.age],
-      ['Gender', d.gender]
-    ]);
-    p.champs([
-      ['Home Phone', d.home_phone],
-      ['May we leave a message?', ouiNon(d.home_phone_message)],
-      ['Cell / Work / Other Phone', d.cell_phone],
-      ['May we leave a message?', ouiNon(d.cell_phone_message)],
-      ['Email', d.email],
-      ['May we leave a message?', ouiNon(d.email_message)]
-    ]);
-    p.paragraphe('Please note: email correspondence is not considered to be a confidential '
-      + 'medium of communication.', { italique: true, taille: 8 });
+    p.barre('Personal Information');
+    p.rang([['Name', nomComplet(d)], ['Date', d.today_date]], [0.64, 0.36]);
+    p.rang([['Parent / Legal Guardian (if under 18)', d.guardian_name]], [0.84]);
+    p.rang([['Address', adresseComplete(d)]], [0.9]);
+    p.rang([['Home Phone', d.home_phone],
+            ['May we leave a message?', ouiNonCases(d.home_phone_message)]], [0.5, 0.5]);
+    p.rang([['Cell / Work / Other Phone', d.cell_phone],
+            ['May we leave a message?', ouiNonCases(d.cell_phone_message)]], [0.5, 0.5]);
+    p.rang([['Email', d.email],
+            ['May we leave a message?', ouiNonCases(d.email_message)]], [0.5, 0.5]);
+    p.paragraphe('*Please note: Email correspondence is not considered to be a confidential '
+      + 'medium of communication.', { italique: true, taille: 8, apres: 1 });
+    p.rang([['DOB', d.date_of_birth], ['Age', d.age], ['Gender', d.gender]], [0.4, 0.24, 0.36]);
+    p.intertitre('Marital Status', { apres: 0 });
+    var statuts = grilleChoix(STATUTS_MARITAUX, d.marital_status);
+    p.rangCases('', statuts.slice(0, 3), { ecart: 14, apres: 0 });
+    p.rangCases('', statuts.slice(3), { ecart: 14 });
+    p.rang([['Referred By (if any)', d.referred_by]], [0.78]);
 
-    p.titreSection('Marital Status', 'A1');
-    p.grilleCases(grilleChoix(STATUTS_MARITAUX, d.marital_status), 3);
+    p.barre('History');
+    p.paragraphe('Have you previously received any type of mental health services '
+      + '(psychotherapy, psychiatric services, etc.)?', { couleur: GRIS, taille: T_ETIQ, apres: 0 });
+    p.rang([['', ouiNonCases(d.prior_mh_services)],
+            ['Previous therapist / practitioner', d.prior_practitioner]], [0.18, 0.82]);
+    p.rang([['Are you currently taking any prescription medication?', ouiNonCases(d.current_meds)]], [1]);
+    p.rang([['If yes, please list', d.current_meds_list]], [0.92]);
+    p.rang([['Have you ever been prescribed psychiatric medication?', ouiNonCases(d.psych_meds_ever)]], [1]);
+    p.rang([['If yes, please list and provide dates', d.psych_meds_list]], [0.92]);
 
-    p.section('B', 'History');
-    p.questionCourte('Have you previously received any type of mental health services '
-      + '(psychotherapy, psychiatric services, etc.)?', ouiNon(d.prior_mh_services));
-    p.question('Previous therapist / practitioner', d.prior_practitioner);
-    p.questionCourte('Are you currently taking any prescription medication?',
-      ouiNon(d.current_meds));
-    p.question('If yes, please list', d.current_meds_list);
-    p.questionCourte('Have you ever been prescribed psychiatric medication?',
-      ouiNon(d.psych_meds_ever));
-    p.question('If yes, please list and provide dates', d.psych_meds_list);
-
-    p.section('C', 'General and Mental Health Information');
-    p.titreSection('Current physical health', 'C1');
-    p.grilleCases(grilleChoix(ECHELLE_SANTE, d.physical_health_rating), 5);
-    p.question('Specific health problems currently experienced', d.physical_health_problems);
-
-    p.titreSection('Current sleeping habits', 'C2');
-    p.grilleCases(grilleChoix(ECHELLE_SANTE, d.sleep_rating), 5);
-    p.question('Specific sleep problems currently experienced', d.sleep_problems);
-
-    p.titreSection('Exercise', 'C3');
-    p.champs([
-      ['How many times per week do you generally exercise?', d.exercise_frequency],
-      ['What types of exercise do you participate in?', d.exercise_types]
-    ]);
-
-    p.titreSection('Appetite and eating', 'C4');
-    p.question('Please list any difficulties you experience with your appetite or eating problems',
+    /* ─── 2 of 3 : page 5 du papier ─── */
+    p.saut();
+    p.intertitre('General and Mental Health Information', { apres: 3 });
+    var r = 14;
+    p.paragraphe('1. How would you rate your current physical health? (Please circle one)',
+      { couleur: GRIS, taille: T_ETIQ, apres: 0 });
+    p.echelle(ECHELLE_SANTE, d.physical_health_rating, { retrait: r });
+    p.rang([['Please list any specific health problems you are currently experiencing',
+             d.physical_health_problems]], [1], { retrait: r });
+    p.paragraphe('2. How would you rate your current sleeping habits? (Please circle one)',
+      { couleur: GRIS, taille: T_ETIQ, apres: 0 });
+    p.echelle(ECHELLE_SANTE, d.sleep_rating, { retrait: r });
+    p.rang([['Please list any specific health problems you are currently experiencing',
+             d.sleep_problems]], [1], { retrait: r });
+    p.rang([['3. How many times per week do you generally exercise?', d.exercise_frequency]], [0.7]);
+    p.rang([['What types of exercise do you participate in?', d.exercise_types]], [1], { retrait: r });
+    p.rangDessous('4. Please list any difficulties you experience with your appetite or eating problems:',
       d.appetite_problems);
-
-    p.titreSection('Mood, anxiety and pain', 'C5');
-    p.questionCourte('Are you currently experiencing overwhelming sadness, grief or depression?',
-      ouiNon(d.depression));
-    p.question('If yes, for approximately how long?', d.depression_duration, { apres: 4 });
-    p.questionCourte('Are you currently experiencing anxiety, panic attacks or have any phobias?',
-      ouiNon(d.anxiety));
-    p.question('If yes, when did you begin experiencing this?', d.anxiety_onset, { apres: 4 });
-    p.questionCourte('Are you currently experiencing any chronic pain?', ouiNon(d.chronic_pain));
-    p.question('If yes, please describe', d.chronic_pain_describe);
-
-    p.titreSection('Alcohol and substance use', 'C6');
-    p.questionCourte('Do you drink alcohol more than once a week?', ouiNon(d.alcohol_weekly));
-    p.paragraphe('How often do you engage in recreational drug use?',
-      { gras: true, taille: 8.4, apres: 4 });
-    p.grilleCases(grilleChoix(FREQUENCE_DROGUE, d.drug_use_frequency), 5);
-
-    p.titreSection('Relationships and recent events', 'C7');
-    p.questionCourte('Are you currently in a romantic relationship?', ouiNon(d.relationship));
-    p.champs([
-      ['If yes, for how long?', d.relationship_duration],
-      ['Relationship rating (1 poor to 10 exceptional)', d.relationship_rating]
-    ]);
-    p.question('What significant life changes or stressful events have you experienced recently?',
+    p.rang([['5. Are you currently experiencing overwhelming sadness, grief or depression?',
+             ouiNonCases(d.depression)]], [1]);
+    p.rang([['If yes, for approximately how long?', d.depression_duration]], [0.8], { retrait: r });
+    p.rang([['6. Are you currently experiencing anxiety, panic attacks or have any phobias?',
+             ouiNonCases(d.anxiety)]], [1]);
+    p.rang([['If yes, when did you begin experiencing this?', d.anxiety_onset]], [1], { retrait: r });
+    p.rang([['7. Are you currently experiencing any chronic pain?', ouiNonCases(d.chronic_pain)]], [1]);
+    p.rang([['If yes, please describe', d.chronic_pain_describe]], [1], { retrait: r });
+    p.rang([['8. Do you drink alcohol more than once a week?', ouiNonCases(d.alcohol_weekly)]], [1]);
+    p.paragraphe('9. How often do you engage in recreational drug use?',
+      { couleur: GRIS, taille: T_ETIQ, apres: 0 });
+    p.rangCases('', grilleChoix(FREQUENCE_DROGUE, d.drug_use_frequency), { ecart: 14 });
+    p.rang([['10. Are you currently in a romantic relationship?', ouiNonCases(d.relationship)]], [1]);
+    p.rang([['If yes, for how long?', d.relationship_duration]], [0.7], { retrait: r });
+    p.rang([['On a scale of 1-10 (with 1 being poor and 10 being exceptional), how would you rate '
+             + 'your relationship?', d.relationship_rating]], [1]);
+    p.rangDessous('11. What significant life changes or stressful events have you experienced recently?',
       d.life_changes);
 
-    p.section('D', 'Family Mental Health History',
-      'Family history of any of the following, and the family member concerned.');
-    var lignes = ANTECEDENTS_FAMILIAUX.map(function (a) {
-      return [a[1], ouiNon(d[a[0]]) || 'No', nonVide(d[a[0] + '_who']) || '—'];
+    /* ─── 3 of 3 : page 4 du papier ─── */
+    p.saut();
+    p.intertitre('Family Mental Health History', { apres: 1 });
+    p.paragraphe('In the section below, identify if there is a family history of any of the '
+      + 'following. If yes, please indicate the family member\'s relationship to you in the '
+      + 'space provided (e.g. father, grandmother, uncle, etc.)');
+    var lignes = [['', 'Please Circle', 'List Family Member']];
+    ANTECEDENTS_FAMILIAUX.forEach(function (a) {
+      lignes.push([a[1], { entourer: ['yes', 'no'], choix: ouiNon(d[a[0]]) },
+                   ['', nonVide(d[a[0] + '_who'])]]);
     });
-    p.tableau(['Condition', 'Yes / No', 'Family member'], lignes, [4, 2, 4]);
+    p.tableau(lignes, [4.2, 2.4, 3.4], { hMin: 17 });
 
-    p.section('E', 'Additional Information');
-    p.questionCourte('Are you currently employed?', ouiNon(d.employed));
-    p.question('If yes, what is your current employment situation?', d.employment_situation,
-      { apres: 4 });
-    p.question('Do you enjoy your work? Is there anything stressful about your current work?',
-      d.work_feelings);
-    p.questionCourte('Do you consider yourself to be spiritual or religious?',
-      ouiNon(d.spiritual));
-    p.question('If yes, describe your faith or belief', d.faith_describe);
-    p.question('What do you consider to be some of your strengths?', d.strengths);
-    p.question('What do you consider to be some of your weaknesses?', d.weaknesses);
-    p.question('What would you like to accomplish out of your time in therapy?',
-      d.therapy_goals);
-
+    p.barre('Additional Information');
+    p.rang([['1. Are you currently employed?', ouiNonCases(d.employed)]], [1]);
+    p.rang([['If yes, what is your current employment situation?', d.employment_situation]],
+           [1], { retrait: r });
+    p.rang([['Do you enjoy your work? Is there anything stressful about your current work?',
+             d.work_feelings]], [1], { retrait: r });
+    p.rang([['2. Do you consider yourself to be spiritual or religious?', ouiNonCases(d.spiritual)]], [1]);
+    p.rang([['If yes, describe your faith or belief', d.faith_describe]], [1], { retrait: r });
+    p.rangDessous('3. What do you consider to be some of your strengths', d.strengths, { lignes: 2 });
+    p.rangDessous('4. What do you consider to be some of your weaknesses?', d.weaknesses, { lignes: 2 });
+    p.rangDessous('5. What would you like to accomplish out of your time in therapy?',
+      d.therapy_goals, { lignes: 2 });
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     Les pieces d'identite, dans leur propre document
-     ────────────────────────────────────────────────────────────────────────
-     Elles etaient d'abord dans le questionnaire clinique. C'etait une erreur :
-     ce questionnaire part parfois seul chez un confrere, et il aurait emporte
-     avec lui le permis de conduire et la carte d'assurance du patient. Elles
-     sont donc un document a part, qu'on transmet quand on veut le transmettre.
+     Pages 6 et 9. PRP INITIAL FACE-TO-FACE SCREENING
+     Rempli par le specialiste en readaptation, pas par le patient. Il n'est
+     produit que s'il a effectivement ete rempli : un formulaire de decision
+     vide dans un dossier medical vaut moins que rien.
      ════════════════════════════════════════════════════════════════════════ */
-  function contenuIdentite(p, d, images) {
-    p.encadre('These are the copies the clinic holds of the client’s identification and '
-      + 'insurance coverage. They are kept separately from the clinical record.');
-    p.champs([
-      ['Client Name', nomComplet(d)],
-      ['Date of Birth', d.date_of_birth],
-      ['Insurance (primary)', d.insurance_primary],
-      ['Insurance Member ID', d.insurance_member_id]
-    ]);
-    if (!images) { p.paragraphe('No documents were provided.', { italique: true }); return; }
-    /* 240 points : la hauteur maximale d'une piece (210) plus sa legende.
-       En dessous, un titre pouvait encore se retrouver seul en bas de page,
-       sa carte renvoyee a la suivante. */
-    p.titreSection('Client photograph', 'A1', 240);
-    p.piece(images.face, 'Client photograph');
-    p.titreSection('Government-issued identification', 'A2', 240);
-    p.piece(images.id_front, 'Photo ID — front');
-    p.piece(images.id_back, 'Photo ID — back');
-    p.titreSection('Insurance card', 'A3', 240);
-    p.piece(images.ins_front, 'Insurance card — front');
-    p.piece(images.ins_back, 'Insurance card — back');
+
+  var RETARDS_SCREENING = [
+    ['screen_delay_approval', 'Delay in receiving approval'],
+    ['screen_delay_gender', 'Lack of availability in consumer gender request'],
+    ['screen_delay_schedule', 'Conflict in schedules']
+  ];
+
+  function screeningRempli(d) {
+    return !!(nonVide(d.staff_print_name) || nonVide(d.screen_q1) || nonVide(d.screen_q2)
+      || nonVide(d.staff_signature_image));
+  }
+
+  function contenuScreening(p, d) {
+    p.paragraphe('(Must be completed within five working days of referral)',
+      { italique: true, taille: 7.8, apres: 2 });
+    p.tableau([[['Applicant Name', nomComplet(d)],
+                ['Date', nonVide(d.screening_date) || d.today_date],
+                { cases: grilleChoix(['Adult', 'Minor'], d.screening_applicant_type) }]],
+              [0.52, 0.26, 0.22]);
+    p.paragraphe('The purpose of this form is to document the determination of the applicant’s '
+      + 'acceptance or non-acceptance for enrollment in Ability and Empowerment Services '
+      + 'Psychiatric Rehabilitation Program and has a task-completion checklist to document '
+      + 'the completion of all required tasks relative to the screening assessment and '
+      + 'subsequent required notifications. The rehabilitation specialist or designee shall '
+      + 'maintain the checklist in the applicant’s medical record, if the applicant is '
+      + 'accepted and subsequently enrolled, or if the applicant is subsequently not enrolled '
+      + 'in the program.');
+
+    p.intertitre('Name all parties present during the screening assessment and their '
+      + 'relationship to the client:', { taille: 8.6 });
+    var parties = Array.isArray(d.screening_parties) ? d.screening_parties : [];
+    var lignes = [['Participant', 'Relationship']];
+    parties.forEach(function (x) {
+      if (x && (nonVide(x.name) || nonVide(x.relationship))) {
+        lignes.push([['', nonVide(x.name)], ['', nonVide(x.relationship)]]);
+      }
+    });
+    while (lignes.length < 3) lignes.push([null, null]);
+    p.tableau(lignes, [1, 1]);
+
+    p.intertitre('Assessing Applicant’s Rehabilitation Service Needs and Willingness to '
+      + 'Participate in Rehabilitation Services', { taille: 8.6 });
+    var q = { couleur: GRIS, taille: T_ETIQ, apres: 0 };
+    p.encadre(function () {
+      p.paragraphe('1. Has the applicant’s rehabilitation service needs been determined based '
+        + 'on the information contained in the program referral form, documentation of medical '
+        + 'necessity and a mental health treatment plan?', q);
+      p.rang([['', ouiNonCases(d.screen_q1)], ['If no, Explain below', d.screen_q1_explain]], [0.2, 0.8]);
+      p.filet();
+      p.rang([['2. Is the client willing and able to participate in the PRP services?',
+               ouiNonCases(d.screen_q2)]], [1]);
+      p.rang([['If no, Explain below', d.screen_q2_explain]], [1], { retrait: 14 });
+      p.filet();
+      p.rang([['3. Is the program able to address the client’s needs as identified?',
+               ouiNonCases(d.screen_q3)]], [1]);
+      p.rang([['If no, Explain below and identify the date the applicant was notified in writing',
+               d.screen_q3_explain]], [1], { retrait: 14 });
+      p.rang([['Date applicant notified in writing', d.screen_q3_notified_date]], [0.6], { retrait: 14 });
+      p.rang([['The applicant and family, as appropriate, was provided with the reasons for the '
+               + 'determination?', ouiNonCases(d.screen_q3_reasons_provided)]], [1], { retrait: 14 });
+      p.rang([['The applicant and family, as appropriate, was provided with recommendations for '
+               + 'alternative services?', ouiNonCases(d.screen_q3_alternatives_provided)]], [1],
+             { retrait: 14 });
+      p.filet();
+      p.rang([['4. If accepted, was the applicant’s level of acceptance identified in writing?',
+               ouiNonCases(d.screen_q4)]], [1]);
+      p.rang([['If no, Explain below', d.screen_q4_explain]], [1], { retrait: 14 });
+      p.filet();
+      p.rang([['5. When is enrollment anticipated?', d.screen_q5_enrollment]], [1]);
+    });
+
+    /* La page 9 du papier : la seconde moitie du screening. */
+    var retards = RETARDS_SCREENING.map(function (r) {
+      return { texte: r[1], coche: estOui(d[r[0]]) };
+    });
+    retards.push({
+      texte: 'Other', autre: nonVide(d.screen_delay_other_text),
+      coche: estOui(d.screen_delay_other) || !!nonVide(d.screen_delay_other_text)
+    });
+    var enRetard = retards.some(function (x) { return x.coche; })
+      || ouiNon(d.screen_ontime) === 'No';
+    p.encadre(function () {
+      p.intertitre('6. Check box(es) as appropriate:', { taille: 8.6, apres: 0 });
+      p.caseTexte(estOui(d.screen_ontime), 'Screening is on time (as initially scheduled)', { apres: 1 });
+      p.caseTexte(enRetard, 'Screening is delayed due to:', { apres: 0 });
+      p.rangCases('', retards, { retrait: 14, largeAutre: 120 });
+      p.filet();
+      p.intertitre('Staff name and Title completing this screening:', { taille: 8.6, apres: 0 });
+      p.filet();
+      p.rang([['Print Name', d.staff_print_name], ['Title', d.staff_title]], [0.5, 0.5]);
+      p.rang([['Sign Name', { sig: d.staff_signature_image }],
+              ['Date Signed', nonVide(d.staff_date_signed)]], [0.62, 0.38]);
+    });
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     4. EMERGENCY CONTACT AND PRIMARY CARE PHYSICIAN INFORMATION
+     Page 7. EMERGENCY CONTACT AND PRIMARY CARE PHYSICIAN INFORMATION
      ════════════════════════════════════════════════════════════════════════ */
 
   var RELATIONS_CONTACT = ['Legal Guardian', 'Foster Parent', 'Social Worker', 'Other'];
 
-  function blocContactUrgence(p, d, prefixe, titre, numero) {
-    p.titreSection(titre, numero);
-    p.champs([
-      ['Name(s)', d[prefixe + '_name']],
-      ['Relationship to Client', nonVide(d[prefixe + '_relationship_other'])
-        || nonVide(d[prefixe + '_relationship'])],
-      ['Address', adressePrefixe(d, prefixe)],
-      ['Email', d[prefixe + '_email']],
-      ['Phone number — A.M.', d[prefixe + '_phone_am']],
-      ['Phone number — P.M.', d[prefixe + '_phone_pm']]
-    ]);
-    p.grilleCases(grilleChoix(RELATIONS_CONTACT, d[prefixe + '_relationship']), 4);
+  /* Le papier porte deux blocs de contact. Le second reste imprime, vide, si
+     le patient n'a donne qu'un contact : c'est la place que le cabinet lui
+     reserve, et la case « I don't have a second emergency contact » y
+     repond. */
+  function blocContactUrgence(p, d, prefixe) {
+    p.rang([['Name(s)', d[prefixe + '_name']]], [0.7]);
+    p.rang([['Address: Street', nonVide(d[prefixe + '_street'])], ['Apt #', d[prefixe + '_apt']],
+            ['City', d[prefixe + '_city']], ['State', d[prefixe + '_state']],
+            ['Zip Code', d[prefixe + '_zip']]], [0.33, 0.13, 0.22, 0.13, 0.19]);
+    p.rang([['Phone number(s): A.M.', d[prefixe + '_phone_am']], ['P.M.', d[prefixe + '_phone_pm']],
+            ['Email', d[prefixe + '_email']]], [0.37, 0.25, 0.38]);
+    p.rang([['Relationship to Client', { cases: choixAvecAutre(RELATIONS_CONTACT,
+             d[prefixe + '_relationship'], d[prefixe + '_relationship_other']), largeAutre: 96 }]], [1]);
   }
 
   function contenuUrgencePcp(p, d) {
-    p.paragraphe('I, ' + (nomComplet(d) || '_______________________________')
-      + ', give my consent to contact the individuals included on this form (emergency '
-      + 'contacts) in case of emergencies.');
-    p.paragraphe(MENTION_MINEUR, { italique: true, taille: 8 });
+    p.rang([['I', nomComplet(d)],
+            ['', { texte: 'give my consent to contact the individuals included on this form' }]],
+           [0.42, 0.58]);
+    p.paragraphe('(emergency contacts) in case of emergencies:', { italique: true, taille: 8, apres: 0 });
+    p.rang([['Date', d.signature_date],
+            ['Signature of client/legal guardian for clients', { sig: d.signature_image }]],
+           [0.34, 0.66]);
+    p.paragraphe(MENTION_MINEUR, { italique: true, taille: 7.8, apres: 2 });
 
-    p.section('A', 'Emergency Contacts');
-    blocContactUrgence(p, d, 'ec1', 'First emergency contact', 'A1');
-    /* Le formulaire ne demande plus qu'un contact, comme le papier qui ecrit
-       « Name(s) » au pluriel dans un bloc unique. Le second bloc ne sort donc
-       que si des donnees existent, par exemple un dossier repris d'une
-       version anterieure. */
-    if (String(d.ec2_name || '').trim()) {
-      blocContactUrgence(p, d, 'ec2', 'Second emergency contact', 'A2');
-    }
-    p.caseACocher(estOui(d.ec_authorize_medical),
-      'I authorize to give medical information to these contacts in case of emergency.');
-    p.caseACocher(estOui(d.ec_no_second),
-      "I don't have a second emergency contact (only for children).");
+    p.intertitre('Emergency Contacts:', { apres: 0 });
+    blocContactUrgence(p, d, 'ec1');
+    blocContactUrgence(p, d, 'ec2');
+    p.caseTexte(estOui(d.ec_authorize_medical),
+      'I authorize to give medical information to these contacts in case of emergency.', { apres: 1 });
+    p.caseTexte(estOui(d.ec_no_second),
+      "I don't have a second emergency contact (Only for children)");
 
-    p.section('B', 'Primary Care Physician Contact Form');
-    p.champs([
-      ['Physician Name', d.pcp_name],
-      ['Phone Number', d.pcp_phone],
-      ['Address — Street', d.pcp_address]
-    ]);
-    p.question('Allergies', d.allergies);
-    p.question('Known Medical Conditions', d.medical_conditions);
-    p.caseACocher(estOui(d.pcp_none),
-      'I do not have a Primary Care Physician at present. I will find one and arrange to '
-      + 'have a physical.');
-    p.caseACocher(estOui(d.pcp_cannot_afford),
-      'I am unable to afford physician health care and will not be able to arrange for a '
-      + 'physical at this time.');
+    p.intertitre('Primary Care Physician Contact Form', { souligne: true, apres: 0 });
+    p.rang([['Physician Name', d.pcp_name], ['Phone Number', d.pcp_phone]], [0.58, 0.42]);
+    p.rang([['Address: Street', d.pcp_address]], [0.86]);
+    p.rang([['Allergies', d.allergies]], [0.8]);
+    p.rang([['Known Medical Conditions', d.medical_conditions]], [0.86]);
+    p.espace(2);
+    p.caseTexte(estOui(d.pcp_none),
+      'I do not have a Primary Care Physician at present. I will find one and arrange to have a physical.',
+      { apres: 1 });
+    p.caseTexte(estOui(d.pcp_cannot_afford),
+      'I am unable to afford physician health care and will not be able to arrange for a physical '
+      + 'at this time.');
 
-    p.paragraphe('I agree that the information above has not changed since the last date signed.',
-      { gras: true });
-    blocSignature(p, d, 'CLIENT / LEGAL GUARDIAN SIGNATURE');
+    p.encadre(function () {
+      p.paragraphe('I agree that the information above has not changed since the last date signed.',
+        { apres: 1 });
+      p.filet();
+      p.rang([['Client/Legal Guardian Signature', { sig: d.signature_image }],
+              ['Printed Name', nomImprime(d)], ['Date', d.signature_date]], [0.5, 0.32, 0.18]);
+      p.filet();
+      p.rang([['Client/Legal Guardian Signature', { sig: aTuteur(d) ? d.guardian_signature_image : '' }],
+              ['Printed Name', aTuteur(d) ? d.guardian_printed_name : ''],
+              ['Date', aTuteur(d) ? d.signature_date : '']], [0.5, 0.32, 0.18]);
+    });
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     5. HIPAA PATIENT / CLIENT CONSENT FORM
+     Page 8. HIPAA PATIENT / CLIENT CONSENT FORM
      ════════════════════════════════════════════════════════════════════════ */
 
   var HIPAA_INTRO = [
@@ -1027,25 +1321,27 @@
   function contenuHipaa(p, d) {
     for (var i = 0; i < HIPAA_INTRO.length; i++) p.paragraphe(HIPAA_INTRO[i]);
     p.puces(HIPAA_PUCES);
-    p.paragraphe('The Client understands that:', { gras: true, apres: 4 });
+    p.intertitre('The Client understands that:', { apres: 1 });
     p.puces(HIPAA_CLIENT);
     p.paragraphe('Ability and Empowerment Services may condition treatment upon the execution '
       + 'of this consent (for example, you may be required to pay for your visit at the time '
       + 'of service for all Medicaid clients).');
+    p.espace(8);
 
     var dt = dateEnMots(d.signature_date);
-    p.champs([
-      ['Signed this (day)', dt.jour],
-      ['Month', dt.mois],
-      ['Year (20__)', dt.annee],
-      ['Relationship to Patient', nonVide(d.hipaa_relationship)
-        || nonVide(d.signer_relationship) || 'Self']
-    ]);
-    blocSignature(p, d, 'SIGNATURE');
+    p.rang([['Signed this', dt.jour], ['day of', dt.mois], ['20', dt.annee]], [0.26, 0.32, 0.16],
+           { brut: true });
+    p.rang([['Relationship to Patient', nonVide(d.hipaa_relationship)
+              || nonVide(d.signer_relationship) || 'Self']], [0.66]);
+    p.rang([['Signature', { sig: d.signature_image }]], [0.66]);
+    ligneTuteur(p, d);
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     6. INFORMED CONSENT FOR TELEHEALTH (AUDIO AND VIDEO) AND TELEPHONIC
+     Pages 10, 11 et 12. INFORMED CONSENT FOR TELEHEALTH (AUDIO AND VIDEO)
+     AND TELEPHONIC SERVICES
+     La page 12 du papier ne portait que les signatures, seules sur une
+     feuille blanche. Elles closent ici la page du texte qu'elles signent.
      ════════════════════════════════════════════════════════════════════════ */
 
   var TELEHEALTH_DEF = [
@@ -1067,23 +1363,37 @@
     'I understand that different states have different regulations for the use of Telehealth (audio and video) and telephonic. In Maryland, Telehealth (audio and video) and Telephonic may only be conducted between certified office locations. I understand that, in Maryland, I am not able to connect from an alternative location for the provision of audio-/video-/computer-based psychotherapy and/or counseling services.'
   ];
 
+  /* L'article 7 porte trois alineas que le papier pose en retrait, « a. »,
+     « b. », « c. ». L'ecran les lit d'un seul tenant ; le document les
+     remet a leur place, sans changer un mot. */
+  function droitTelesante(p, i) {
+    var t = TELEHEALTH_DROITS[i];
+    var m = /^(.*request the following:) \(a\) (.*), \(b\) (.*), and\/or \(c\) (.*)$/.exec(t);
+    if (!m) { p.paragraphe((i + 1) + '. ' + t); return; }
+    p.paragraphe((i + 1) + '. ' + m[1], { apres: 1 });
+    p.paragraphe('a. ' + m[2] + ',', { retrait: 18, apres: 1 });
+    p.paragraphe('b. ' + m[3] + ', and/or', { retrait: 18, apres: 1 });
+    p.paragraphe('c. ' + m[4], { retrait: 18 });
+  }
+
   function contenuTelehealth(p, d) {
-    p.titreSection('Definition of Telehealth (audio and video) and Telephonic');
+    p.intertitre('Definition of Telehealth (audio and video) and Telephonic', { souligne: true });
     for (var i = 0; i < TELEHEALTH_DEF.length; i++) p.paragraphe(TELEHEALTH_DEF[i]);
+    p.paragraphe('I understand that I have the rights with respect to Telehealth (audio and '
+      + 'video) and Telephonic:');
+    for (var j = 0; j < 6; j++) droitTelesante(p, j);
 
-    p.titreSection('My rights with respect to Telehealth and Telephonic');
-    p.liste(TELEHEALTH_DROITS);
-
-    p.titreSection('Payment for Telehealth and Telephonic Services');
-    p.paragraphe('Ability and Empowerment Services will bill insurance for Telehealth (audio '
-      + 'and video) and Telephonic services when these services have been determined to be '
-      + 'covered by an individual’s insurance plan. In the event that insurance does not '
-      + 'cover Telehealth (audio and video) and Telephonic, the individual wishes to pay '
-      + 'out-of-pocket, or when there is no insurance coverage, a prompt pay discount is '
-      + 'available. We will provide you with a statement of service to submit to your '
-      + 'insurance company if you wish.');
-
-    p.titreSection('Person Served Consent to the Use of Telehealth and Telephonic');
+    /* La page 11 du papier commence a l'article 7. */
+    p.saut();
+    for (var k = 6; k < TELEHEALTH_DROITS.length; k++) droitTelesante(p, k);
+    p.paragraphe('Payment for Telehealth (audio and video) and Telephonic Services, Ability and '
+      + 'Empowerment Services will bill insurance for Telehealth (audio and video) and '
+      + 'Telephonic services when these services have been determined to be covered by an '
+      + 'individual’s insurance plan. In the event that insurance does not cover Telehealth '
+      + '(audio and video) and Telephonic, the individual wishes to pay out-of-pocket, or when '
+      + 'there is no insurance coverage, a prompt pay discount is available. We will provide '
+      + 'you with a statement of service to submit to your insurance company if you wish.');
+    p.intertitre('Person Served Consent to the Use of Telehealth (audio and video) and Telephonic');
     p.paragraphe('I have read and understand the information provided above regarding '
       + 'Telehealth (audio and video) and Telephonic, have discussed it with my counselor, '
       + 'and all of my questions have been answered to my satisfaction.');
@@ -1092,13 +1402,24 @@
       + 'had my questions regarding the procedure explained. I hereby give my informed '
       + 'consent to participate in the use of Telehealth (audio and video) and Telephonic '
       + 'services for treatment under the terms described herein.');
+
+    /* Ce qui etait seul sur la page 12 du papier. */
+    p.espace(10);
     p.paragraphe('By my signature below, I hereby state that I have read, understood, and '
-      + 'agree to the terms of this document.', { gras: true });
-    blocSignature(p, d, 'PERSON’S SIGNATURE');
+      + 'agree to the terms of this document.', { apres: 2 });
+    p.rang([['Print Name', nomImprime(d)]], [0.66]);
+    p.rang([['Person\'s Signature', { sig: d.signature_image }], ['Date', d.signature_date]],
+           [0.66, 0.34]);
+    p.rang([['Parent or Guardian Signature', { sig: aTuteur(d) ? d.guardian_signature_image : '',
+              nom: aTuteur(d) ? d.guardian_printed_name : '' }],
+            ['Date', aTuteur(d) ? d.signature_date : '']], [0.66, 0.34]);
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     7. AUTHORIZATION TO EXCHANGE INFORMATION
+     Pages 13 et 14. AUTHORIZATION TO EXCHANGE INFORMATION
+     La page 14 du papier ne portait que trois lignes de signature. La
+     premiere recoit la signature du jour ; les deux autres restent vides,
+     pour les renouvellements annuels, comme sur le papier.
      ════════════════════════════════════════════════════════════════════════ */
 
   var ECHANGE_ELEMENTS = [
@@ -1118,48 +1439,36 @@
   var RELATIONS_ECHANGE = ['Self', 'Legal guardian', 'Foster parent', 'Social worker', 'Other'];
 
   function contenuEchange(p, d) {
-    p.champs([
-      ['Person Name', nomComplet(d)],
-      ['Date of Birth', d.date_of_birth],
-      ['Address', adresseComplete(d)]
-    ]);
-
-    p.titreSection('Exchange of Information with', 'A1');
-    p.champs([
-      ['Name / Agency', d.exchange_agency_name],
-      ['Phone', d.exchange_agency_phone],
-      ['Address', d.exchange_agency_address],
-      ['Fax', d.exchange_agency_fax]
-    ]);
-
-    p.paragraphe('I, ' + (nomComplet(d) || '_______________________________')
-      + ', freely give consent to A&E and the informant to exchange the below noted '
+    p.rang([['Person Name', nomComplet(d)], ['DOB', d.date_of_birth]], [0.64, 0.36]);
+    p.rang([['Address', adresseComplete(d)]], [0.86]);
+    p.paragraphe('Exchange of Information with', { italique: true, apres: 0 });
+    p.rang([['(Name/Agency)', d.exchange_agency_name]], [0.86]);
+    p.rang([['Address', d.exchange_agency_address], ['Phone', d.exchange_agency_phone],
+            ['Fax', d.exchange_agency_fax]], [0.5, 0.27, 0.23]);
+    p.rang([['I,', nomComplet(d)]], [0.66]);
+    p.paragraphe('freely give consent to A&E and the informant to exchange the below noted '
       + 'information for the purpose of payment, facilitating treatment, and continuity of '
       + 'care for me or for my child.');
 
-    p.titreSection('Information to be exchanged', 'A2');
     var items = ECHANGE_ELEMENTS.map(function (e) {
-      return { texte: e[1], coche: estOui(d[e[0]]) };
+      return { cases: [{ texte: e[1], coche: estOui(d[e[0]]) }] };
     });
-    items.push({
-      texte: 'Other: ' + (nonVide(d.exch_other_text) || '—'),
-      coche: estOui(d.exch_other) || !!nonVide(d.exch_other_text)
-    });
-    p.grilleCases(items, 2);
+    items.push({ cases: [{ texte: 'Other', autre: nonVide(d.exch_other_text),
+      coche: estOui(d.exch_other) || !!nonVide(d.exch_other_text) }], largeAutre: 150 });
+    var grille = [];
+    for (var i = 0; i < items.length; i += 2) grille.push([items[i], items[i + 1] || null]);
+    p.tableau(grille, [1, 1]);
 
-    p.champs([
-      ['If information is required for a specific period, from', d.exchange_from],
-      ['To', d.exchange_to]
-    ]);
-
+    p.rang([['If information is required for specific period of time, please specify from',
+             d.exchange_from], ['to', d.exchange_to]], [0.72, 0.28]);
     p.paragraphe('I understand that my therapist may be supervised, and that the supervisor '
       + 'will have access to confidential information. I agree that the therapist’s '
-      + 'supervisor may substitute for the therapist in exchange in information.');
-    p.caseACocher(estOui(d.exchange_supervisor_consent),
-      'Yes, the supervisor may substitute for the therapist.');
-    p.caseACocher(estOui(d.exchange_declined),
-      'No, I do not wish for A&E to exchange information with anyone at this time.');
-
+      + 'supervisor may substitute for the therapist in exchange in information.', { apres: 1 });
+    p.rangCases('', [
+      { texte: 'Yes', coche: estOui(d.exchange_supervisor_consent) },
+      { texte: 'No, I do not wish for A&E to exchange information with anyone at this time.',
+        coche: estOui(d.exchange_declined) }
+    ], { ecart: 30 });
     p.paragraphe('This consent to release information is given freely, voluntarily, and '
       + 'without coercion, and may be withdrawn by me at any time. Any information I '
       + 'authorize other professionals to release to A&E will be held strictly confidential '
@@ -1167,238 +1476,156 @@
       + 'or Federal law. I understand that I have the right to inspect the record or mental '
       + 'health information about the above-named individual. The information to be disclosed '
       + 'may include information about medical conditions, including HIV/AIDS and substance '
-      + 'abuse, which is pertinent and relevant to the facilitation of treatment.');
+      + 'abuse, which is pertinent and relevant to the facilitation of treatment.',
+      { italique: true, taille: 8.4 });
     p.paragraphe('This authorization is effective for one year from the date below.',
-      { gras: true });
-    p.paragraphe(MENTION_MINEUR, { italique: true, taille: 8 });
+      { gras: true, italique: true, apres: 0 });
+    p.rang([['Date', d.signature_date], ['Please print your name', nomImprime(d)]], [0.4, 0.6]);
+    p.paragraphe(MENTION_MINEUR, { italique: true, taille: 7.6, apres: 0 });
+    p.rang([['Relationship to Person', { cases: choixAvecAutre(RELATIONS_ECHANGE,
+             nonVide(d.exchange_relationship) || nonVide(d.signer_relationship) || 'Self',
+             d.exchange_relationship_other), largeAutre: 90 }]], [1]);
+    var temoin = nonVide(d.witness_signature_image);
+    p.rang([['Signature of Witness', { sig: d.witness_signature_image, nom: d.witness_name }],
+            ['Date', temoin ? (nonVide(d.witness_signature_date) || d.signature_date) : '']],
+           [0.66, 0.34]);
 
-    p.titreSection('Relationship to Person', 'A3');
-    p.grilleCases(grilleChoix(RELATIONS_ECHANGE,
-      nonVide(d.exchange_relationship) || nonVide(d.signer_relationship) || 'Self'), 5);
-    if (nonVide(d.exchange_relationship_other)) {
-      p.champs([['Other — please specify', d.exchange_relationship_other]], 1);
-    }
-
-    p.paragraphe('I agree that the information above has not changed since the last date it '
-      + 'was signed.', { gras: true });
-    blocSignature(p, d, 'PERSON / LEGAL GUARDIAN SIGNATURE');
-    p.signature({
-      image: d.witness_signature_image,
-      date: nonVide(d.witness_signature_date) || d.signature_date,
-      libelle: 'SIGNATURE OF WITNESS',
-      nomImprime: nonVide(d.witness_name),
-      sousTitre: 'Witness',
-      libelleDate: 'DATE SIGNED (MM/DD/YYYY)'
+    p.encadre(function () {
+      p.paragraphe('I agree that the information above has not changed since the last date it '
+        + 'was signed.', { apres: 1 });
+      var lignesSig = [
+        [d.signature_image, nomImprime(d), d.signature_date],
+        aTuteur(d) ? [d.guardian_signature_image, d.guardian_printed_name, d.signature_date]
+                   : ['', '', ''],
+        ['', '', '']
+      ];
+      for (var k = 0; k < lignesSig.length; k++) {
+        p.filet();
+        p.rang([['Person/Legal Guardian Signature', { sig: lignesSig[k][0] }],
+                ['Print Name of Person that Signed', lignesSig[k][1]],
+                ['Date', lignesSig[k][2]]], [0.4, 0.43, 0.17], { etiquette: 7.8 });
+      }
     });
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     8. ACKNOWLEDGEMENT OF RECEIPT — PERSONS SERVED HANDBOOK
+     Page 15. ACKNOWLEDGE RECEIPT OF PERSONS SERVED HANDBOOK
      ════════════════════════════════════════════════════════════════════════ */
 
   function contenuManuel(p, d) {
     p.paragraphe('I acknowledge that I have received a copy of the Ability and Empowerment '
       + 'Services Persons Served Handbook (Orientation Handbook), and that its contents have '
-      + 'been explained to me.');
-    blocSignature(p, d, 'PERSON SERVED — SIGNATURE', 'Person served');
-    p.signature({
-      image: d.staff_signature_image,
-      date: nonVide(d.staff_date_signed) || d.signature_date,
-      libelle: 'PROGRAM REPRESENTATIVE — SIGNATURE',
-      nomImprime: nonVide(d.staff_print_name),
-      sousTitre: nonVide(d.staff_title) || 'Program representative',
-      libelleDate: 'DATE SIGNED (MM/DD/YYYY)'
-    });
+      + 'been explained to me.', { apres: 8 });
+    var staff = nonVide(d.staff_signature_image);
+    p.tableau([
+      [{ titre: 'Signatures' }, null],
+      [{ sig: d.signature_image, libelle: 'Persons served', nom: nomImprime(d) },
+       ['Date', d.signature_date]],
+      [{ sig: aTuteur(d) ? d.guardian_signature_image : '', libelle: 'Parent/Guardian, if Applicable',
+         nom: aTuteur(d) ? d.guardian_printed_name : '' },
+       ['Date', aTuteur(d) ? d.signature_date : '']],
+      [{ sig: d.staff_signature_image, libelle: 'Program Representative', nom: d.staff_print_name },
+       ['Date', staff ? (nonVide(d.staff_date_signed) || d.signature_date) : '']]
+    ], [0.72, 0.28]);
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     9. COMMUNITY SUPPORTS AND FAMILY OF ORIGIN
+     Page 16. COMMUNITY SUPPORTS AND FAMILY OF ORIGIN
      Le contact d'urgence et le medecin traitant sont redemandes ici dans le
      dossier papier. Ils sont repris de la saisie unique, pas retapes.
      ════════════════════════════════════════════════════════════════════════ */
 
   function contenuSupports(p, d) {
-    p.section('1', 'Emergency Contact');
-    p.champs([
-      ['Name of Contact', d.ec1_name],
-      ['Relationship to Person', nonVide(d.ec1_relationship_other) || nonVide(d.ec1_relationship)],
-      ['Address', adressePrefixe(d, 'ec1')],
-      ['Contact number', nonVide(d.ec1_phone_am) || nonVide(d.ec1_phone_pm)]
-    ]);
-
-    p.section('2', 'Community Supports');
-    p.champs([
-      ['Family / Significant Other', d.support_name],
-      ['Relationship to Person', d.support_relationship],
-      ['Phone #', d.support_phone],
-      ['Address', d.support_address],
-      ['Primary Care Physician', d.pcp_name],
-      ['Phone #', d.pcp_phone],
-      ['Address', d.pcp_address]
-    ]);
-
-    p.section('3', 'Family of Origin History');
-    p.champs([
-      ['Mother’s Name', d.mother_name],
-      ['Age', d.mother_age],
-      ['Is Mother Alive?', ouiNon(d.mother_alive)],
-      ['Nature of Relationship', d.mother_relationship],
-      ['Father’s Name', d.father_name],
-      ['Age', d.father_age],
-      ['Is Father Alive?', ouiNon(d.father_alive)],
-      ['Nature of Relationship', d.father_relationship]
-    ]);
-    p.question('Siblings — name and age', d.siblings);
-    p.question('Other source of income if unemployed', d.other_income);
+    var villeEtatZip = [[nonVide(d.ec1_city), nonVide(d.ec1_state)].filter(Boolean).join(', '),
+                        nonVide(d.ec1_zip)].filter(Boolean).join(' ');
+    var rue1 = nonVide(d.ec1_street) + (nonVide(d.ec1_apt) ? ', Apt ' + nonVide(d.ec1_apt) : '');
+    p.tableau([
+      [{ titre: '1-  Emergency Contact' }, null],
+      [['Name of Contact', d.ec1_name],
+       ['Relationship to Person', nonVide(d.ec1_relationship_other) || nonVide(d.ec1_relationship)]],
+      [['Address', rue1], ['City, State, Zip', villeEtatZip]],
+      [['Contact number', nonVide(d.ec1_phone_am) || nonVide(d.ec1_phone_pm)], null],
+      [{ titre: '2-  Community Supports', souligne: true }, null],
+      [['Family / Significant Other', d.support_name], ['Phone #', d.support_phone]],
+      [['Address', d.support_address], ['Relationship to Person', d.support_relationship]],
+      [['Primary Care Physician', d.pcp_name], null],
+      [['Phone #', d.pcp_phone], ['Address', d.pcp_address]],
+      [{ titre: '3-  Family of Origin History', souligne: true }, null],
+      [['Mother’s Name', d.mother_name], ['Age', d.mother_age]],
+      [['Is Mother Alive?', ouiNon(d.mother_alive)], ['Nature of Relationship', d.mother_relationship]],
+      [null, null],
+      [['Father’s Name', d.father_name], ['Age', d.father_age]],
+      [['Is Father Alive?', ouiNon(d.father_alive)], ['Nature of Relationship', d.father_relationship]],
+      [['Siblings Name and Age', d.siblings], null],
+      [['Other source of income if unemployed', d.other_income], null]
+    ], [1, 1], { hMin: 22 });
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     10. PRP INITIAL FACE-TO-FACE SCREENING
-     Rempli par le specialiste en readaptation, pas par le patient. Il n'est
-     produit que s'il a effectivement ete rempli : un formulaire de decision
-     vide dans un dossier medical vaut moins que rien.
+     Les pieces d'identite, sur leur page, a la fin du dossier
+     ────────────────────────────────────────────────────────────────────────
+     Le papier n'en a pas : c'est la seule page nouvelle. Chaque piece a son
+     cadre, de taille fixe, a sa place, qu'elle ait ete fournie ou non. La
+     photo en haut a gauche, a cote de l'identite ; les cartes au format
+     d'une carte, recto a gauche, verso a droite.
      ════════════════════════════════════════════════════════════════════════ */
+  function contenuIdentite(p, d, images) {
+    images = images || {};
+    var y0 = p.etat.y;
+    var wPhoto = 128, hPhoto = 160, xChamps = L + wPhoto + 22;
+    p.cadreImage(images.face, L, y0 + 12, wPhoto, hPhoto, 'Client photograph');
 
-  var RETARDS_SCREENING = [
-    ['screen_delay_approval', 'Delay in receiving approval'],
-    ['screen_delay_gender', 'Lack of availability in consumer gender request'],
-    ['screen_delay_schedule', 'Conflict in schedules']
-  ];
+    p.etat.y = y0 + 4;
+    var o = { depuis: xChamps };
+    p.rang([['Client Name', nomComplet(d)]], [1], o);
+    p.rang([['Date of Birth', d.date_of_birth]], [1], o);
+    p.rang([['Address', adresseComplete(d)]], [1], o);
+    p.rang([['Insurance', d.insurance_primary]], [1], o);
+    p.rang([['Insurance (secondary)', d.insurance_secondary]], [1], o);
+    p.rang([['Insurance Member ID', d.insurance_member_id]], [1], o);
 
-  function screeningRempli(d) {
-    return !!(nonVide(d.staff_print_name) || nonVide(d.screen_q1) || nonVide(d.screen_q2)
-      || nonVide(d.staff_signature_image));
-  }
-
-  function contenuScreening(p, d) {
-    p.encadre('The purpose of this form is to document the determination of the applicant’s '
-      + 'acceptance or non-acceptance for enrollment in Ability and Empowerment Services '
-      + 'Psychiatric Rehabilitation Program and has a task-completion checklist to document '
-      + 'the completion of all required tasks relative to the screening assessment and '
-      + 'subsequent required notifications. The rehabilitation specialist or designee shall '
-      + 'maintain the checklist in the applicant’s medical record, if the applicant is '
-      + 'accepted and subsequently enrolled, or if the applicant is subsequently not enrolled '
-      + 'in the program.');
-    p.paragraphe('Must be completed within five working days of referral.',
-      { italique: true, taille: 8 });
-
-    p.champs([
-      ['Applicant Name', nomComplet(d)],
-      ['Date', nonVide(d.screening_date) || d.today_date]
-    ]);
-    p.grilleCases(grilleChoix(['Adult', 'Minor'], d.screening_applicant_type), 2);
-
-    p.titreSection('Parties present during the screening assessment', 'A1');
-    var parties = Array.isArray(d.screening_parties) ? d.screening_parties : [];
-    var lignes = parties
-      .filter(function (x) { return x && (nonVide(x.name) || nonVide(x.relationship)); })
-      .map(function (x) { return [nonVide(x.name), nonVide(x.relationship)]; });
-    if (!lignes.length) lignes = [['—', '—']];
-    p.tableau(['Participant', 'Relationship'], lignes, [1, 1]);
-
-    p.section('B', 'Assessing Rehabilitation Service Needs and Willingness to Participate');
-    p.questionCourte('1. Has the applicant’s rehabilitation service needs been determined '
-      + 'based on the information contained in the program referral form, documentation of '
-      + 'medical necessity and a mental health treatment plan?', ouiNon(d.screen_q1));
-    p.question('If no, explain', d.screen_q1_explain, { apres: 4 });
-
-    p.questionCourte('2. Is the client willing and able to participate in the PRP services?',
-      ouiNon(d.screen_q2));
-    p.question('If no, explain', d.screen_q2_explain, { apres: 4 });
-
-    p.questionCourte('3. Is the program able to address the client’s needs as identified?',
-      ouiNon(d.screen_q3));
-    p.question('If no, explain and identify the date the applicant was notified in writing',
-      d.screen_q3_explain, { apres: 4 });
-    p.champs([['Date applicant notified in writing', d.screen_q3_notified_date]], 1);
-    p.questionCourte('The applicant and family, as appropriate, was provided with the reasons '
-      + 'for the determination?', ouiNon(d.screen_q3_reasons_provided));
-    p.questionCourte('The applicant and family, as appropriate, was provided with '
-      + 'recommendations for alternative services?', ouiNon(d.screen_q3_alternatives_provided));
-
-    p.questionCourte('4. If accepted, was the applicant’s level of acceptance identified '
-      + 'in writing?', ouiNon(d.screen_q4));
-    p.question('If no, explain', d.screen_q4_explain, { apres: 4 });
-    p.question('5. When is enrollment anticipated?', d.screen_q5_enrollment);
-
-    p.titreSection('6. Screening timeliness', 'B1');
-    p.caseACocher(estOui(d.screen_ontime), 'Screening is on time (as initially scheduled)');
-    p.caseACocher(!estOui(d.screen_ontime), 'Screening is delayed due to:');
-    var retards = RETARDS_SCREENING.map(function (r) {
-      return { texte: r[1], coche: estOui(d[r[0]]) };
-    });
-    retards.push({
-      texte: 'Other: ' + (nonVide(d.screen_delay_other_text) || '—'),
-      coche: estOui(d.screen_delay_other) || !!nonVide(d.screen_delay_other_text)
-    });
-    p.grilleCases(retards, 2);
-
-    p.titreSection('Staff name and title completing this screening', 'B2');
-    p.champs([
-      ['Print Name', d.staff_print_name],
-      ['Title', d.staff_title]
-    ]);
-    p.signature({
-      image: d.staff_signature_image,
-      date: nonVide(d.staff_date_signed) || d.today_date,
-      libelle: 'SIGN NAME',
-      nomImprime: nonVide(d.staff_print_name),
-      sousTitre: nonVide(d.staff_title) || 'Rehabilitation specialist',
-      libelleDate: 'DATE SIGNED (MM/DD/YYYY)'
-    });
+    var w = (UTILE - 20) / 2, h = Math.round(w / 1.586);
+    var yB = y0 + 12 + hPhoto + 30, yC = yB + h + 30;
+    p.cadreImage(images.id_front, L, yB, w, h, 'Photo ID — front');
+    p.cadreImage(images.id_back, L + w + 20, yB, w, h, 'Photo ID — back');
+    p.cadreImage(images.ins_front, L, yC, w, h, 'Insurance card — front');
+    p.cadreImage(images.ins_back, L + w + 20, yC, w, h, 'Insurance card — back');
+    p.etat.y = yC + h + 4;
   }
 
   /* ════════════════════════════════════════════════════════════════════════
      Assemblage
-     Chaque document est decrit une seule fois. Le meme descripteur sert a le
-     produire seul, dans son fichier, et enchaine dans le dossier relie.
+     Un seul fichier : les documents s'enchainent dans l'ordre du papier,
+     chacun sur sa ou ses pages. `pages` est le nombre de feuilles que le
+     document doit occuper ; le banc d'essai refuse tout ecart. `echelle`
+     agrandit le texte des documents qui laissaient un grand blanc ; les plus
+     denses (screening, echange) restent a 1.
      ════════════════════════════════════════════════════════════════════════ */
 
   var DOCUMENTS = [
-    { cle: 'prp_consent', fichier: 'PRP Consent for Treatment',
-      titre: 'PRP CONSENT FOR TREATMENT',
-      sousTitre: 'Psychiatric Rehabilitation Program',
-      contenu: contenuPrpConsent },
-    { cle: 'omhc_consent', fichier: 'OMHC Consent for Treatment',
-      titre: 'OMHC CONSENT FOR TREATMENT',
-      sousTitre: 'Outpatient Mental Health Clinic',
-      contenu: contenuOmhcConsent },
-    { cle: 'intake', fichier: 'Client Intake Questionnaire',
-      titre: 'CLIENT INTAKE QUESTIONNAIRE',
-      sousTitre: 'Confidential client information',
-      contenu: contenuIntake },
-    { cle: 'emergency_pcp', fichier: 'Emergency Contact and Primary Care Physician',
-      titre: 'EMERGENCY CONTACT AND PRIMARY CARE PHYSICIAN',
-      sousTitre: 'Consent to contact and physician information',
-      contenu: contenuUrgencePcp },
-    { cle: 'hipaa', fichier: 'HIPAA Consent',
-      titre: 'HIPAA PATIENT / CLIENT CONSENT FORM',
-      sousTitre: 'Health Insurance Portability and Accountability Act of 1996',
-      contenu: contenuHipaa },
-    { cle: 'telehealth', fichier: 'Informed Consent for Telehealth',
-      titre: 'INFORMED CONSENT FOR TELEHEALTH',
-      sousTitre: 'Audio and video, and telephonic services',
-      contenu: contenuTelehealth },
-    { cle: 'exchange', fichier: 'Authorization to Exchange Information',
-      titre: 'AUTHORIZATION TO EXCHANGE INFORMATION',
-      sousTitre: 'Valid for one year from the date signed',
-      contenu: contenuEchange },
-    { cle: 'handbook', fichier: 'Acknowledgement of Handbook Receipt',
-      titre: 'ACKNOWLEDGEMENT OF RECEIPT',
-      sousTitre: 'Persons Served Handbook — Orientation Handbook',
-      contenu: contenuManuel },
-    { cle: 'supports', fichier: 'Community Supports and Family of Origin',
-      titre: 'COMMUNITY SUPPORTS AND FAMILY OF ORIGIN',
-      sousTitre: 'Emergency contact, supports and family history',
-      contenu: contenuSupports },
-    { cle: 'identity', fichier: 'Identification and Insurance',
-      titre: 'IDENTIFICATION AND INSURANCE',
-      sousTitre: 'Copies held by the clinic',
-      contenu: contenuIdentite },
-    { cle: 'screening', fichier: 'PRP Initial Face-to-Face Screening',
-      titre: 'PRP INITIAL FACE-TO-FACE SCREENING',
-      sousTitre: 'To be completed by the rehabilitation specialist',
-      contenu: contenuScreening, siRempli: screeningRempli }
+    { cle: 'prp_consent', titre: 'CONSENT FOR TREATMENT', etiquette: 'PRP',
+      papier: [1], pages: 1, echelle: 1.15, contenu: contenuPrpConsent },
+    { cle: 'omhc_consent', titre: 'CONSENT FOR TREATMENT', etiquette: 'OMHC',
+      papier: [2], pages: 1, echelle: 1.15, contenu: contenuOmhcConsent },
+    { cle: 'intake', titre: 'CLIENT INTAKE QUESTIONNAIRE',
+      papier: [3, 5, 4], pages: 3, echelle: 1.15, contenu: contenuIntake },
+    { cle: 'screening', titre: 'PSYCHIATRIC REHABILITATION PROGRAM — INITIAL FACE-TO-FACE SCREENING',
+      papier: [6, 9], pages: 1, echelle: 1, contenu: contenuScreening, siRempli: screeningRempli },
+    { cle: 'emergency_pcp', titre: 'EMERGENCY CONTACT AND PRIMARY CARE PHYSICIAN INFORMATION',
+      papier: [7], pages: 1, echelle: 1.1, contenu: contenuUrgencePcp },
+    { cle: 'hipaa', titre: 'HIPAA PATIENT/CLIENT CONSENT FORM',
+      papier: [8], pages: 1, echelle: 1.1, contenu: contenuHipaa },
+    { cle: 'telehealth',
+      titre: 'INFORMED CONSENT FOR TELEHEALTH (AUDIO AND VIDEO) AND TELEPHONIC SERVICES',
+      papier: [10, 11, 12], pages: 2, echelle: 1.15, contenu: contenuTelehealth },
+    { cle: 'exchange', titre: 'AUTHORIZATION TO EXCHANGE INFORMATION',
+      papier: [13, 14], pages: 1, echelle: 1, contenu: contenuEchange },
+    { cle: 'handbook', titre: 'ACKNOWLEDGE RECEIPT OF PERSONS SERVED HANDBOOK',
+      papier: [15], pages: 1, echelle: 1.15, contenu: contenuManuel },
+    { cle: 'supports', titre: 'COMMUNITY SUPPORTS AND FAMILY OF ORIGIN',
+      papier: [16], pages: 1, echelle: 1.1, contenu: contenuSupports },
+    { cle: 'identity', titre: 'IDENTIFICATION AND INSURANCE',
+      papier: [], pages: 1, echelle: 1, contenu: contenuIdentite }
   ];
 
   function nomFichier(nom, suffixe) {
@@ -1409,26 +1636,6 @@
       + String(d.getDate()).padStart(2, '0') + '_'
       + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
     return base + '_' + suffixe.replace(/\s+/g, '_') + '_' + horo + '.pdf';
-  }
-
-  function documentSeul(desc, d, images) {
-    var p = nouvellePage(desc.titre, desc.sousTitre, THEME_ABILITY);
-    desc.contenu(p, d, images);
-    p.pied();
-    return p.doc;
-  }
-
-  /* Le dossier relie : les memes fonctions de contenu, enchainees, chacune
-     ouvrant sa page et son bandeau. Le cabinet classe une seule piece. */
-  function documentDossier(actifs, d, images) {
-    var p = nouvellePage(actifs[0].titre, actifs[0].sousTitre, THEME_ABILITY);
-    actifs[0].contenu(p, d, images);
-    for (var i = 1; i < actifs.length; i++) {
-      p.entete(actifs[i].titre, actifs[i].sousTitre);
-      actifs[i].contenu(p, d, images);
-    }
-    p.pied();
-    return p.doc;
   }
 
   /* ════════════════════════════════════════════════════════════════════════
@@ -1535,12 +1742,12 @@
   ];
 
   window.construireDocumentsAbility = async function (d) {
-    /* Le logo est cherche une fois, avant la premiere page : les briques de
-       mise en page le lisent ensuite sans attendre. */
+    /* Le logo est cherche une fois, avant la premiere page : l'en-tete le lit
+       ensuite sans attendre. */
     await chargerLogoAbility();
 
     /* Une photo de telephone pese plusieurs megaoctets. Elle est reduite une
-       seule fois, puis servie aux deux exemplaires du questionnaire. */
+       seule fois, avant d'etre posee dans son cadre. */
     var images = {
       face: await preparerImage(d.image_face, 1400),
       id_front: await preparerImage(d.image_id_front, 1400),
@@ -1553,28 +1760,31 @@
       return !desc.siRempli || desc.siRempli(d);
     });
 
-    var nom = nomComplet(d);
-    var sortie = { _docs: {} };
-
-    var dossier = documentDossier(actifs, d, images);
-    sortie.pdf_packet = dossier.output('datauristring').split(',')[1];
-    sortie.pdf_packet_nom = nomFichier(nom, 'Admission Packet');
-    sortie._docs.packet = dossier;
-
+    var p = nouveauDossier();
     for (var i = 0; i < actifs.length; i++) {
-      var doc = documentSeul(actifs[i], d, images);
-      sortie['pdf_' + actifs[i].cle] = doc.output('datauristring').split(',')[1];
-      sortie['pdf_' + actifs[i].cle + '_nom'] = nomFichier(nom, actifs[i].fichier);
-      sortie._docs[actifs[i].cle] = doc;
+      p.ouvrir(actifs[i].cle, actifs[i].titre, actifs[i].etiquette, actifs[i].echelle);
+      actifs[i].contenu(p, d, images);
     }
+    p.pied();
 
-    sortie.documents_produits = actifs.map(function (a) { return a.cle; }).join(',');
-    return sortie;
+    return {
+      pdf_packet: p.doc.output('datauristring').split(',')[1],
+      pdf_packet_nom: nomFichier(nomComplet(d), 'Admission Packet'),
+      documents_produits: actifs.map(function (a) { return a.cle; }).join(','),
+      /* Pour le banc d'essai seulement : la page ne recopie que les cles
+         `pdf_`, rien de ceci ne part au cabinet. */
+      _docs: { packet: p.doc },
+      _mise_en_page: {
+        reperes: p.reperes, signatures: p.signatures, debordements: p.debordements,
+        remplissage: p.remplissage,
+        prevues: actifs.map(function (a) { return { cle: a.cle, pages: a.pages }; })
+      }
+    };
   };
 
   /* Le banc d'essai Node rejoue ce fichier hors navigateur : il a besoin des
      descripteurs pour verifier les documents un par un. */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { DOCUMENTS: DOCUMENTS, THEME_ABILITY: THEME_ABILITY };
+    module.exports = { DOCUMENTS: DOCUMENTS };
   }
 })();
