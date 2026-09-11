@@ -8,14 +8,14 @@
  *      s'ouvre quand le wifi du cabinet tombe.
  *
  * `documents.js` est traite comme la page, et ce n'est pas un exces de zele :
- * il porte les onze documents et les textes juridiques signes. Un jour ou il
+ * il porte le dossier et les textes juridiques signes. Un jour ou il
  * etait servi depuis le cache pendant que la page etait a jour, un document
  * entier a disparu d'un envoi de test sans que rien ne le signale.
  *
  * Les envois ne sont jamais touches ici : ce sont des POST, le navigateur ne
  * les met pas en cache, et la page tient sa propre file de reprise.
  */
-var VERSION = "aes-intake-v15";
+var VERSION = "aes-intake-v16";
 var SHELL = [
   "./",
   "./index.html",
