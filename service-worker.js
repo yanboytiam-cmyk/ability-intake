@@ -15,7 +15,7 @@
  * Les envois ne sont jamais touches ici : ce sont des POST, le navigateur ne
  * les met pas en cache, et la page tient sa propre file de reprise.
  */
-var VERSION = "aes-intake-v16";
+var VERSION = "aes-intake-v17";
 var SHELL = [
   "./",
   "./index.html",
