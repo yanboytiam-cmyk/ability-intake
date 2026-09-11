@@ -19,8 +19,11 @@
         du texte qu'elle signe.
      2. La mise en page est serree : les reponses s'ecrivent sur la ligne,
         comme au stylo sur le papier, et non sous leur etiquette.
-     3. Un seul fichier, le dossier complet. Les pieces d'identite ont leur
-        page, a la fin, avec un cadre fixe par image.
+     3. Un seul fichier, le dossier complet. Les photos vivent dans les
+        documents, a cote du texte qu'elles prouvent : le visage du patient
+        dans l'en-tete de chaque page, la piece d'identite sous « Personal
+        Information », la carte d'assurance sous les lignes « Insurance » du
+        consentement PRP (demande de Yanis, le 2026-09-11).
 
    Correspondance avec le PDF fourni par le cabinet :
 
@@ -40,7 +43,6 @@
         closent la 13)
      Acknowledge Receipt of Persons Served Handbook ... page 15
      Community Supports and Family of Origin .......... page 16
-     Identification and Insurance ..................... nouvelle, les photos
 
    Le texte juridique n'est jamais reformule : il est repris mot pour mot du
    dossier papier fourni par le cabinet. Ce que le patient a lu a l'ecran est
@@ -74,11 +76,21 @@
   };
 
   /* Format lettre, en points. BAS est la derniere ligne ou le contenu peut
-     descendre : en dessous vit le pied de page. */
+     descendre : en dessous vit le pied de page. L'en-tete occupe le haut
+     jusqu'a 70, photo du patient comprise ; le bandeau de titre se pose en
+     Y_BANDEAU, et une page de suite commence en Y_SUITE. */
   var LARG = 612, HAUT = 792, L = 42;
   var R = LARG - L, UTILE = R - L;
   var BAS = HAUT - 40;
-  var Y_SUITE = 72;
+  var Y_BANDEAU = 74, Y_SUITE = 80;
+
+  /* La photo du patient, en haut a droite de chaque page : 100 x 124 points,
+     soit 35 x 44 mm, la taille d'une photo d'identite. Yanis l'a voulue deux
+     fois plus grande que la photo de badge du premier jet, pour qu'on
+     reconnaisse le patient au premier coup d'oeil. Elle descend plus bas que
+     l'en-tete : ce qui commence a sa hauteur se raccourcit a sa gauche. */
+  var W_PHOTO = 100, H_PHOTO = 124, Y_PHOTO = 8;
+  var BAS_PHOTO = Y_PHOTO + H_PHOTO;
 
   /* Le corps du texte juridique, les libelles et les reponses. Une reponse
      se resserre jusqu'a T_REP_MIN avant de passer a la ligne.
@@ -187,15 +199,16 @@
      Convention : `etat.y` est le haut de l'espace libre. Chaque brique
      reserve sa hauteur avec place(), dessine, puis descend `etat.y`.
      ──────────────────────────────────────────────────────────────────────── */
-  function nouveauDossier() {
+  function nouveauDossier(photo) {
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({ unit: 'pt', format: 'letter', compress: true });
     var logo = logoAbility();
     var etat = { y: Y_SUITE, cle: '', vierge: true, marge: 0 };
 
     /* Ce que le banc d'essai relit : ou commence et finit chaque document,
-       sur quelle page tombe chaque signature, et tout debordement. */
-    var reperes = [], signatures = [], debordements = [], remplissage = {};
+       sur quelle page tombe chaque signature et chaque photo, et tout
+       debordement. */
+    var reperes = [], signatures = [], debordements = [], remplissage = {}, poses = [];
 
     function page() { return doc.internal.getNumberOfPages(); }
     function encre(c) { doc.setTextColor(c[0], c[1], c[2]); }
@@ -207,42 +220,74 @@
       encre(c || ENCRE);
     }
     function gauche() { return L + etat.marge; }
-    function droite() { return R - etat.marge; }
+
+    /* Le bord droit du contenu. A hauteur de la photo, il recule jusqu'a
+       elle : une ligne qui commence a cote de la photo s'arrete avant. */
+    function droite() {
+      var d = R - etat.marge;
+      if (photo && etat.y < BAS_PHOTO + 2) d = Math.min(d, R - W_PHOTO - 12);
+      return d;
+    }
+
+    /* Un tableau, un encadre ou une paire de cartes ne se raccourcit pas :
+       ses colonnes et sa bordure doivent garder la meme largeur de haut en
+       bas. S'il tombe a cote de la photo, il commence sous elle. */
+    function sousPhoto() {
+      if (photo && etat.y < BAS_PHOTO + 6) etat.y = BAS_PHOTO + 8;
+    }
     function noter() {
       var p = page();
       remplissage[p] = Math.max(remplissage[p] || 0, etat.y);
     }
 
     /* L'en-tete du papier, repris sur chaque page comme sur le papier : le
-       logo a gauche, la raison sociale centree, un filet. */
+       logo a gauche, la raison sociale centree, un filet. Et, en face du
+       logo, la photo du patient : sur chaque page, une feuille detachee du
+       dossier dit encore a qui elle appartient. */
     function enTete() {
-      var x = L + 62;
+      var x = L + 62, fin = photo ? R - W_PHOTO - 12 : R;
       if (logo) {
         try { doc.addImage(logo, 'PNG', L, 10, 52, 52); } catch (e) { }
       }
-      var cx = (x + R) / 2;
+      if (photo) photoEnTete();
+      var cx = (x + fin) / 2;
       doc.setFont('times', 'bold'); doc.setFontSize(13.5); encre(ENCRE);
       doc.text(CABINET.nom, cx, 29, { align: 'center' });
       doc.setFont('times', 'normal'); doc.setFontSize(9); encre(GRIS);
       doc.text(CABINET.adresse, cx, 41, { align: 'center' });
       doc.text(CABINET.contact, cx, 52, { align: 'center' });
       trait(ENCRE, 0.6);
-      doc.line(x, 59, R, 59);
+      doc.line(x, 59, fin, 59);
       etat.y = Y_SUITE;
+    }
+
+    /* L'image est posee entiere, sans deformation, et n'est embarquee qu'une
+       fois dans le PDF, quel que soit le nombre de pages. */
+    function photoEnTete() {
+      var w = W_PHOTO, h = H_PHOTO, x = R - w, y = Y_PHOTO;
+      var ech = Math.min(w / photo.w, h / photo.h);
+      var iw = photo.w * ech, ih = photo.h * ech;
+      try {
+        doc.addImage(photo.uri, photo.format, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih, 'photo-client');
+      } catch (e) { }
+      trait(CADRE, 0.6);
+      doc.rect(x, y, w, h);
+      poses.push({ cle: etat.cle, quoi: 'face', page: page() });
     }
 
     /* Le bandeau marine du papier, titre en blanc, et l'etiquette rose du
        programme quand il y en a une (« PRP », « OMHC »). */
     function bandeau(titre, etiquette) {
-      var y = 66, h = 16, tT = 10.5, tE = 8.4, lE = 0;
-      fond(MARINE); doc.rect(L, y, UTILE, h, 'F');
+      var y = Y_BANDEAU, h = 16, tT = 10.5, tE = 8.4, lE = 0;
+      var fin = photo ? R - W_PHOTO - 12 : R, larg = fin - L;
+      fond(MARINE); doc.rect(L, y, larg, h, 'F');
       doc.setFont('times', 'bold');
       if (etiquette) { doc.setFontSize(tE); lE = doc.getTextWidth(etiquette) + 9; }
       doc.setFontSize(tT);
-      while (doc.getTextWidth(titre) + lE + 26 > UTILE && tT > 7.5) {
+      while (doc.getTextWidth(titre) + lE + 26 > larg && tT > 7) {
         tT -= 0.5; doc.setFontSize(tT);
       }
-      var x = LARG / 2 - (doc.getTextWidth(titre) + (lE ? lE + 6 : 0)) / 2;
+      var x = (L + fin) / 2 - (doc.getTextWidth(titre) + (lE ? lE + 6 : 0)) / 2;
       if (etiquette) {
         fond(ROSE); doc.rect(x, y + 3, lE, h - 6, 'F');
         doc.setFontSize(tE); encre(BLANC);
@@ -315,11 +360,16 @@
       var taille = opts.taille || T_TEXTE, il = opts.interligne || IL;
       police(style, taille, opts.couleur || ENCRE);
       var x = gauche() + (opts.retrait || 0);
-      var lignes = doc.splitTextToSize(String(txt), droite() - x);
-      for (var i = 0; i < lignes.length; i++) {
+      /* La largeur se relit a chaque ligne : un paragraphe qui commence a cote
+         de la photo reprend toute la largeur des qu'il l'a depassee. */
+      var reste = String(txt);
+      while (reste) {
         if (place(il)) police(style, taille, opts.couleur || ENCRE);
-        doc.text(lignes[i], x, etat.y + il * 0.78);
+        var ligne = doc.splitTextToSize(reste, droite() - x)[0] || '';
+        if (!ligne || reste.indexOf(ligne) !== 0) ligne = reste;
+        doc.text(ligne, x, etat.y + il * 0.78);
         etat.y += il;
+        reste = reste.slice(ligne.length).replace(/^\s+/, '');
       }
       etat.y += (opts.apres === undefined ? 3.5 : opts.apres);
     }
@@ -747,6 +797,7 @@
     /* Un tableau a bordures, comme ceux du papier. */
     function tableau(lignes, parts, opts) {
       opts = opts || {};
+      sousPhoto();
       var x0 = gauche(), larg = droite() - x0;
       var total = parts.reduce(function (a, b) { return a + b; }, 0);
       var largeurs = parts.map(function (p) { return larg * p / total; });
@@ -783,6 +834,7 @@
        briques qu'il contient se decalent de sa marge. */
     function encadre(fn, opts) {
       opts = opts || {};
+      sousPhoto();
       var y0 = etat.y, p0 = page();
       etat.marge = 6; etat.y += 2;
       fn();
@@ -824,10 +876,37 @@
       }
     }
 
+    /* Recto et verso cote a cote, au format d'une carte (85,6 x 54 mm), a la
+       place du texte qu'ils prouvent. Sans aucune des deux images, une seule
+       ligne le dit : deux grands cadres vides mangeraient la page pour rien. */
+    function paireImages(a, b, legA, legB, opts) {
+      opts = opts || {};
+      var w = opts.largeur || 243, h = Math.round(w / 1.586), g = 16;
+      var cles = opts.cles || [legA, legB];
+      sousPhoto();
+      if (!a && !b) {
+        place(16);
+        police('bold', 7.4, GRIS);
+        var lib = (opts.vide || legA).toUpperCase();
+        doc.text(lib, gauche(), etat.y + 10);
+        police('italic', 8.4, PALE);
+        doc.text('Not provided', gauche() + doc.getTextWidth(lib) + 12, etat.y + 10);
+        etat.y += 16;
+        return;
+      }
+      place(h + 22);
+      var y = etat.y + 12;
+      cadreImage(a, gauche(), y, w, h, legA);
+      cadreImage(b, gauche() + w + g, y, w, h, legB);
+      poses.push({ cle: etat.cle, quoi: cles[0], page: page(), image: !!a });
+      poses.push({ cle: etat.cle, quoi: cles[1], page: page(), image: !!b });
+      etat.y = y + h + 10;
+    }
+
     return {
       doc: doc, etat: etat,
       reperes: reperes, signatures: signatures, debordements: debordements,
-      remplissage: remplissage,
+      remplissage: remplissage, poses: poses, paireImages: paireImages,
       ouvrir: ouvrir, saut: saut, place: place, espace: espace, pied: pied,
       paragraphe: paragraphe, intertitre: intertitre, barre: barre, puces: puces,
       rang: rang, rangDessous: rangDessous, rangCases: rangCases, caseTexte: caseTexte,
@@ -959,7 +1038,9 @@
     'I certify that I have read and understand the information provided in this consent form. I agree to participate in mental health treatment services at Ability & Empowerment voluntarily and authorize the provision of care as described herein.'
   ];
 
-  function corpsConsentement(p, d, deuxAssurances) {
+  /* `apresChamps` pose ce qui doit suivre les lignes d'identite et
+     d'assurance, avant le texte : la carte d'assurance, pour le PRP. */
+  function corpsConsentement(p, d, deuxAssurances, apresChamps) {
     p.rang([['I,', nomComplet(d)]], [0.66]);
     p.rang([['Date of Birth', d.date_of_birth],
             ['Telephone #', nonVide(d.home_phone) || nonVide(d.cell_phone)]], [0.36, 0.52]);
@@ -971,6 +1052,7 @@
     } else {
       p.rang([['Insurance', d.insurance_primary], ['SSN', d.ssn]], [0.5, 0.34]);
     }
+    if (apresChamps) apresChamps();
     p.espace(4);
     p.paragraphe('...hereby consent to participate in mental health treatment services provided by '
       + 'Ability & Empowerment Health Services. I understand that the purpose of these services '
@@ -981,8 +1063,18 @@
     p.espace(10);
   }
 
-  function contenuPrpConsent(p, d) {
-    corpsConsentement(p, d, true);
+  /* La carte d'assurance, recto et verso, sous les deux lignes « Insurance »
+     qu'elle justifie. Un patient qui paie de sa poche n'en a pas : rien ne
+     s'affiche alors, pas meme un cadre vide. */
+  function carteAssurance(p, d, images) {
+    if (/self-pay/i.test(nonVide(d.insurance_primary))) return;
+    p.espace(2);
+    p.paireImages(images.ins_front, images.ins_back, 'Insurance card — front',
+      'Insurance card — back', { largeur: 204, vide: 'Insurance card', cles: ['ins_front', 'ins_back'] });
+  }
+
+  function contenuPrpConsent(p, d, images) {
+    corpsConsentement(p, d, true, function () { carteAssurance(p, d, images || {}); });
     p.rang([['Client Signature', { sig: d.signature_image }], ['Date', d.signature_date]],
            [0.66, 0.34]);
     ligneTuteur(p, d);
@@ -1028,7 +1120,8 @@
     ['fam_suicide_attempts', 'Suicide Attempts']
   ];
 
-  function contenuIntake(p, d) {
+  function contenuIntake(p, d, images) {
+    images = images || {};
     /* ─── 1 of 3 : page 3 du papier ─── */
     p.paragraphe('Please note: information provided on this form is protected as confidential '
       + 'information.', { italique: true, apres: 2 });
@@ -1051,6 +1144,11 @@
     p.rangCases('', statuts.slice(0, 3), { ecart: 14, apres: 0 });
     p.rangCases('', statuts.slice(3), { ecart: 14 });
     p.rang([['Referred By (if any)', d.referred_by]], [0.78]);
+    /* La piece d'identite, au pied de l'identite qu'elle prouve : nom,
+       adresse, date de naissance. Au format reel d'une carte. */
+    p.espace(2);
+    p.paireImages(images.id_front, images.id_back, 'Photo ID — front', 'Photo ID — back',
+      { largeur: 243, vide: 'Photo ID', cles: ['id_front', 'id_back'] });
 
     p.barre('History');
     p.paragraphe('Have you previously received any type of mental health services '
@@ -1562,38 +1660,6 @@
   }
 
   /* ════════════════════════════════════════════════════════════════════════
-     Les pieces d'identite, sur leur page, a la fin du dossier
-     ────────────────────────────────────────────────────────────────────────
-     Le papier n'en a pas : c'est la seule page nouvelle. Chaque piece a son
-     cadre, de taille fixe, a sa place, qu'elle ait ete fournie ou non. La
-     photo en haut a gauche, a cote de l'identite ; les cartes au format
-     d'une carte, recto a gauche, verso a droite.
-     ════════════════════════════════════════════════════════════════════════ */
-  function contenuIdentite(p, d, images) {
-    images = images || {};
-    var y0 = p.etat.y;
-    var wPhoto = 128, hPhoto = 160, xChamps = L + wPhoto + 22;
-    p.cadreImage(images.face, L, y0 + 12, wPhoto, hPhoto, 'Client photograph');
-
-    p.etat.y = y0 + 4;
-    var o = { depuis: xChamps };
-    p.rang([['Client Name', nomComplet(d)]], [1], o);
-    p.rang([['Date of Birth', d.date_of_birth]], [1], o);
-    p.rang([['Address', adresseComplete(d)]], [1], o);
-    p.rang([['Insurance', d.insurance_primary]], [1], o);
-    p.rang([['Insurance (secondary)', d.insurance_secondary]], [1], o);
-    p.rang([['Insurance Member ID', d.insurance_member_id]], [1], o);
-
-    var w = (UTILE - 20) / 2, h = Math.round(w / 1.586);
-    var yB = y0 + 12 + hPhoto + 30, yC = yB + h + 30;
-    p.cadreImage(images.id_front, L, yB, w, h, 'Photo ID — front');
-    p.cadreImage(images.id_back, L + w + 20, yB, w, h, 'Photo ID — back');
-    p.cadreImage(images.ins_front, L, yC, w, h, 'Insurance card — front');
-    p.cadreImage(images.ins_back, L + w + 20, yC, w, h, 'Insurance card — back');
-    p.etat.y = yC + h + 4;
-  }
-
-  /* ════════════════════════════════════════════════════════════════════════
      Assemblage
      Un seul fichier : les documents s'enchainent dans l'ordre du papier,
      chacun sur sa ou ses pages. `pages` est le nombre de feuilles que le
@@ -1604,9 +1670,9 @@
 
   var DOCUMENTS = [
     { cle: 'prp_consent', titre: 'CONSENT FOR TREATMENT', etiquette: 'PRP',
-      papier: [1], pages: 1, echelle: 1.15, contenu: contenuPrpConsent },
+      papier: [1], pages: 1, echelle: 1.05, contenu: contenuPrpConsent },
     { cle: 'omhc_consent', titre: 'CONSENT FOR TREATMENT', etiquette: 'OMHC',
-      papier: [2], pages: 1, echelle: 1.15, contenu: contenuOmhcConsent },
+      papier: [2], pages: 1, echelle: 1.05, contenu: contenuOmhcConsent },
     { cle: 'intake', titre: 'CLIENT INTAKE QUESTIONNAIRE',
       papier: [3, 5, 4], pages: 3, echelle: 1.15, contenu: contenuIntake },
     { cle: 'screening', titre: 'PSYCHIATRIC REHABILITATION PROGRAM — INITIAL FACE-TO-FACE SCREENING',
@@ -1623,9 +1689,7 @@
     { cle: 'handbook', titre: 'ACKNOWLEDGE RECEIPT OF PERSONS SERVED HANDBOOK',
       papier: [15], pages: 1, echelle: 1.15, contenu: contenuManuel },
     { cle: 'supports', titre: 'COMMUNITY SUPPORTS AND FAMILY OF ORIGIN',
-      papier: [16], pages: 1, echelle: 1.1, contenu: contenuSupports },
-    { cle: 'identity', titre: 'IDENTIFICATION AND INSURANCE',
-      papier: [], pages: 1, echelle: 1, contenu: contenuIdentite }
+      papier: [16], pages: 1, echelle: 1.1, contenu: contenuSupports }
   ];
 
   function nomFichier(nom, suffixe) {
@@ -1760,7 +1824,7 @@
       return !desc.siRempli || desc.siRempli(d);
     });
 
-    var p = nouveauDossier();
+    var p = nouveauDossier(images.face);
     for (var i = 0; i < actifs.length; i++) {
       p.ouvrir(actifs[i].cle, actifs[i].titre, actifs[i].etiquette, actifs[i].echelle);
       actifs[i].contenu(p, d, images);
@@ -1776,7 +1840,7 @@
       _docs: { packet: p.doc },
       _mise_en_page: {
         reperes: p.reperes, signatures: p.signatures, debordements: p.debordements,
-        remplissage: p.remplissage,
+        remplissage: p.remplissage, poses: p.poses,
         prevues: actifs.map(function (a) { return { cle: a.cle, pages: a.pages }; })
       }
     };
