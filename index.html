@@ -1157,7 +1157,6 @@ label.photo{margin:0}
     <h2 id="finiTitre">Your packet is filed</h2>
     <p id="finiTexte">Ability and Empowerment Services has your admission packet. Download your own copy below and keep it.</p>
     <button class="btn btn-p" type="button" id="btnTelecharger" style="max-width:330px;margin:0 auto 12px;width:100%">Download my copy</button>
-    <div id="autresDocs" style="margin-top:6px"></div>
     <p style="font-size:12.5px;margin-top:22px">Reference <b id="refFinale"></b></p>
     <button class="mini" type="button" id="btnRendre" hidden style="margin-top:16px">I am done — clear this tablet</button>
     <!-- Le screening PRP appartient au personnel. Le patient ne le traverse
@@ -2117,9 +2116,13 @@ function majTuteur(){
     donnees.guardian_printed_name = $('guardian_name').value;
   }
 }
+/* Le curseur et son affichage `valRel` sont devenus des puces le 2026-09-06.
+   Sans cette garde, la reprise d'un brouillon (mode ?perso=1) plantait ici,
+   et tout le demarrage qui suit ne s'executait plus : ni l'ecran de reprise,
+   ni la file de renvoi, ni le minuteur d'inactivite. */
 function majRelation(){
   var v = $('relationship_rating').value;
-  $('valRel').textContent = v;
+  if ($('valRel')) $('valRel').textContent = v;
   donnees.relationship_rating = v;
 }
 
@@ -2504,10 +2507,14 @@ function poster(p){
   return new Promise(function(fini){
     var c = new AbortController();
     var t = setTimeout(function(){ c.abort(); }, CONFIG.ABANDON);
+    /* Une reponse en erreur met aussi le dossier en file. Seule une coupure
+       reseau le faisait : un depot Drive rate cote serveur laissait le
+       patient devant « We keep trying on our own » sans que rien ne soit
+       retente. */
     fetch(CONFIG.WEBHOOK, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(p), signal: c.signal
-    }).then(function(r){ clearTimeout(t); fini(r.ok); })
+    }).then(function(r){ clearTimeout(t); if (!r.ok) mettreEnFile(p); fini(r.ok); })
       .catch(function(){ clearTimeout(t); mettreEnFile(p); fini(false); });
   });
 }
@@ -2577,7 +2584,6 @@ function terminer(ok, erreurDoc){
       : 'Your packet could not reach the clinic yet, and it is saved on this device. We keep trying on our own. Download your copy now and keep it.';
   }
   $('btnTelecharger').hidden = !(docsProduits && docsProduits.pdf_packet);
-  peindreAutresDocs();
   peindreFile();
 
   /* Sur la tablette du cabinet, le dossier est desormais soit depose, soit
@@ -2590,24 +2596,9 @@ function terminer(ok, erreurDoc){
   }
   hautDePage();
 }
-function peindreAutresDocs(){
-  var z = $('autresDocs'); z.innerHTML = '';
-  if (!docsProduits) return;
-  var d = document.createElement('details');
-  d.style.cssText = 'max-width:330px;margin:0 auto;text-align:left';
-  d.innerHTML = '<summary style="cursor:pointer;font:500 14px var(--sans);color:var(--bleu);padding:8px 0">Download the forms separately</summary>';
-  var box = document.createElement('div');
-  box.style.cssText = 'display:flex;flex-direction:column;gap:7px;padding:6px 0';
-  Object.keys(docsProduits).forEach(function(k){
-    if (k.indexOf('pdf_') !== 0 || /_nom$/.test(k) || k === 'pdf_packet') return;
-    var b = document.createElement('button');
-    b.type = 'button'; b.className = 'mini';
-    b.textContent = (docsProduits[k + '_nom'] || k).replace(/_/g,' ').replace(/\.pdf$/,'');
-    b.addEventListener('click', function(){ garder(docsProduits[k], docsProduits[k + '_nom']); });
-    box.appendChild(b);
-  });
-  d.appendChild(box); z.appendChild(d);
-}
+/* Un seul fichier, le dossier complet. La liste « Download the forms
+   separately » est partie le 2026-09-11 avec les onze fichiers separes :
+   le cabinet en recevait douze par patient et n'en voulait qu'un. */
 function garder(b64, nom){
   try{
     var bin = atob(b64), n = bin.length, u = new Uint8Array(n);
